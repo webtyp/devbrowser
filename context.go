@@ -7,8 +7,11 @@ import (
 	"webtyp.com/devbrowser/chromedp"
 )
 
-func (h *DevBrowser) CreateBrowserContext() error {
-	// Create allocator with custom options
+// FlagSPKIList trusts the listed SubjectPublicKeyInfo hashes and nothing else.
+// It is NOT --ignore-certificate-errors: verification stays on everywhere else.
+const FlagSPKIList = "ignore-certificate-errors-spki-list"
+
+func (h *DevBrowser) buildAllocatorOptions() []chromedp.ExecAllocatorOption {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", h.Headless),
 		// chromedp defaults enable-automation=true, which shows the headed
@@ -43,9 +46,19 @@ func (h *DevBrowser) CreateBrowserContext() error {
 		)
 	}
 
+	if h.TrustDevCertSPKI != "" {
+		opts = append(opts, chromedp.Flag(FlagSPKIList, h.TrustDevCertSPKI))
+	}
+
 	// Resolve the Chrome executable path
 	chromePath := ResolveChromeExecPath()
 	opts = append(opts, chromedp.ExecPath(chromePath))
+
+	return opts
+}
+
+func (h *DevBrowser) CreateBrowserContext() error {
+	opts := h.buildAllocatorOptions()
 
 	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
 	ctx, cancel := chromedp.NewContext(allocCtx,

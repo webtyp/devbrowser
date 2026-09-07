@@ -31,6 +31,13 @@ type DevBrowser struct {
 	MonitorHeight  int    // Detected monitor availability height
 	SizeConfigured bool   // Track if size was loaded from storage
 
+	// TrustDevCertSPKI is the base64-encoded SHA-256 of a development certificate's
+	// SubjectPublicKeyInfo. When set, the launched browser trusts exactly that
+	// public key; verification stays on for every other origin.
+	//
+	// Obtain it from webtyp.com/server/httpd.DevCertSPKI(). Empty = no pin.
+	TrustDevCertSPKI string
+
 	// DevToolsReserved is true when auto-open-devtools-for-tabs was launched
 	// for this session (context.go decides this once, at CreateBrowserContext
 	// time, based on the window width at launch). Later window growth does not
