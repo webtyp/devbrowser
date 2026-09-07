@@ -107,6 +107,11 @@ func TestDeviceEmulation_ValidationAndDistinctModes(t *testing.T) {
 	if !strings.Contains(resultText, "Device emulation set to desktop") || !strings.Contains(resultText, "viewport 1440x900") {
 		t.Errorf("Desktop response should specify viewport 1440x900. Got: %s", resultText)
 	}
+	// desktop PINS the override, so the stored mode is the deterministic half of
+	// "the two branches are distinct" — see the off case below.
+	if db.ViewportMode != "desktop" {
+		t.Errorf("desktop must pin the override; ViewportMode = %q, want \"desktop\"", db.ViewportMode)
+	}
 
 	// 3. Setting "off" clears overrides and returns actual window layout
 	argsOff := devbrowser.EmulateDeviceArgs{Mode: "off"}
@@ -132,11 +137,21 @@ func TestDeviceEmulation_ValidationAndDistinctModes(t *testing.T) {
 	}
 
 	// Criterion 2 (Part A): desktop and off must produce DISTINCT branches.
-	// desktop pins 1440x900; off clears the override and reports the real
-	// window size. Asserting the two reported viewports differ catches a
-	// regression where the two modes collapse into the same action list.
-	if strings.Contains(resultTextOff, "viewport 1440x900") {
-		t.Errorf("off must not pin the desktop viewport; desktop and off would be indistinguishable. off reply: %s", resultTextOff)
+	//
+	// This cannot be asserted from the reported viewport, and asserting "off does
+	// not report 1440x900" was a bug in this test. Step 2 above sets desktop,
+	// which calls GrowWindowToFit(1440, 900); window_autofit.go grows the live
+	// window "and never shrinks it". off pins nothing and reads window.innerWidth
+	// back from that same window — which is now exactly 1440x900. The assertion
+	// failed on correct behaviour this test had itself caused two steps earlier,
+	// and passed only when DPI or the DevTools reservation happened to push the
+	// window past 1440x900.
+	//
+	// What distinguishes the branches is the stored mode: mcp-management.go sets
+	// b.ViewportMode = args.Mode, so desktop pins an override and off clears it.
+	// That is exact on every machine and no window can defeat it.
+	if db.ViewportMode != "off" {
+		t.Errorf("off must clear the emulation override; ViewportMode = %q, want \"off\"", db.ViewportMode)
 	}
 	if !strings.Contains(resultTextOff, "viewport ") {
 		t.Errorf("off reply should still report the resulting viewport (Criterion 6). got: %s", resultTextOff)

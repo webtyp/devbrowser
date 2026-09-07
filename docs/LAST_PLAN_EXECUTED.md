@@ -1,6 +1,6 @@
 ---
 PLAN: "fix: device-emulation test asserts on the developer's monitor size"
-EXECUTOR: jules
+EXECUTOR: local
 REVIEWER: none
 ---
 
@@ -41,16 +41,27 @@ if strings.Contains(resultTextOff, "viewport 1440x900") {
 }
 ```
 
-The intent is correct: `desktop` and `off` must be distinct branches. The
-mechanism is not. It infers "the branches are distinct" from a viewport value
-the **environment** controls — the real browser window after autofit. On a
-machine where that window happens to be 1440×900, `off` correctly reports
-1440×900 and the test reports a regression that did not happen.
+### The real root cause — worse than "it depends on the monitor"
 
-It is not flaky in the usual sense. It is a correct implementation failing an
-assertion about the developer's monitor. Skill **testing**: a test must be
-deterministic and side-effect free; a result that depends on the display is
-neither.
+**The test's own previous step creates the condition this step forbids.**
+
+Step 2 sets mode `desktop`. In `mcp-management.go` that path calls
+`GrowWindowToFit(1440, 900)`, and `window_autofit.go` documents that it
+"resizes the live physical browser window, in place, so it is at least
+(reqW, reqH) … **and never shrinks it**".
+
+Step 3 then sets mode `off`, which pins nothing and reads the viewport back with
+`chromedp.Evaluate("window.innerWidth")` — the **real** window. That window was
+just grown to fit exactly 1440×900 and never shrinks, so on most machines it now
+reads exactly 1440×900.
+
+The assertion "off must not report 1440x900" therefore fails on **correct
+behaviour that the test itself caused two steps earlier**. It passed only when
+the display, DPI or DevTools reservation happened to push the window past
+1440×900 — which is why it looked intermittent.
+
+The intent is right: `desktop` and `off` must be distinct branches. The
+mechanism is not — a reported pixel size cannot carry that meaning here.
 
 ## Design gate
 
@@ -58,37 +69,23 @@ Not required — this changes no public API. It changes one test's assertion.
 
 ## The fix
 
-Assert the invariant the comment states — *the two modes take different
-branches* — by comparing the two replies to each other, not by hard-coding a
-magic viewport.
+Assert the invariant on the **stored mode**, which is what actually distinguishes
+the branches and is deterministic on every machine.
+
+`mcp-management.go` assigns `b.ViewportMode = args.Mode` before applying the
+emulation: `desktop` pins an override, `off` clears it. Asserting that is exact,
+needs no window, and cannot be defeated by autofit.
 
 In `tests/device_emulation_test.go`, the `desktop` reply is already captured
 earlier in the same test. Replace the `1440x900` check with:
 
-1. Extract the viewport substring from each reply with one helper in this test
-   file:
-
-   ```go
-   // viewportOf returns the "WxH" reported in a device-emulation reply, or "" if
-   // the reply carries none.
-   func viewportOf(reply string) string
-   ```
-
-2. Assert `desktop` reports a viewport, `off` reports a viewport, and — **only
-   when the real window differs from the pinned desktop size** — that the two
-   differ. When the machine's window genuinely is 1440×900 the two are equal and
-   that is correct behaviour, not a failure, so the branch assertion must not run.
-
-3. Assert what actually distinguishes the branches and does not depend on the
-   display: `desktop` reports the pinned size `1440x900` **always**, on every
-   machine. That assertion is deterministic and catches the collapse the comment
-   is worried about — if `off` collapsed into `desktop`, `desktop` would still
-   pass, so keep assertion 2 as the conditional complement rather than deleting
-   it.
-
-Replace the misleading comment with one that says what is actually guaranteed:
-`desktop` is deterministic, `off` is environment-dependent by design, and the
-test may only assert the second relative to the first.
+1. After step 2, assert `db.ViewportMode == "desktop"`.
+2. After step 3, assert `db.ViewportMode == "off"` — this replaces the
+   `1440x900` negative check entirely.
+3. Keep the positive assertions: `desktop` reports `viewport 1440x900` (it pins,
+   so this is deterministic) and `off` still reports some `viewport `.
+4. Replace the misleading comment with the mechanism above, so the next reader
+   does not reintroduce the same assertion.
 
 **Do not** fix this by pinning the window size in the test, by skipping the test
 on some machines, or by deleting the assertion. The first makes `off` untestable
