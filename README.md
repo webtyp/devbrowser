@@ -41,6 +41,38 @@ func main() {
 - `(*DevBrowser) Name() string` and `(*DevBrowser) Label() string`: For UI integration, returns the component name and label.
 - `(*DevBrowser) Execute(progress func(msgs ...any))`: For UI integration, toggles browser open/close and reports progress.
 
+- `TrustDevCertSPKI string` (field): the base64-encoded SHA-256 of a development
+  certificate's SubjectPublicKeyInfo. When set, the launched browser trusts
+  **exactly that public key**; certificate verification stays on for every other
+  origin. Empty means no pin.
+
+	- Obtain it from `webtyp.com/server/httpd.DevCertSPKI()`. Set it before
+	  `OpenBrowser()`.
+	- It launches Chrome with `--ignore-certificate-errors-spki-list`. That is
+	  **not** `--ignore-certificate-errors`: this browser visits arbitrary pages
+	  while debugging, and a blanket bypass would also trust a genuinely broken
+	  certificate on any site. `--ignore-certificate-errors`,
+	  `--allow-insecure-localhost` and `--disable-web-security` are forbidden here
+	  and a test fails if any of them appears.
+	- Without it, a dev server on HTTPS fails to open with
+	  `net::ERR_CERT_AUTHORITY_INVALID`.
+	- This is why no certificate authority is installed into the operating
+	  system: the tool launches the browser it needs to convince, so it configures
+	  it instead. No elevated privileges, identical on Linux, macOS and Windows,
+	  and nothing left behind. A phone on the LAN is a different client and cannot
+	  be given a flag — it installs the CA served at `/__webtyp/ca` instead.
+	- Example:
+
+```go
+spki, err := httpd.DevCertSPKI()
+if err != nil {
+	log.Println("browser will not trust the dev server:", err)
+}
+db := devbrowser.New(myServerConfig{}, myUI{}, exitChan)
+db.TrustDevCertSPKI = spki
+err = db.OpenBrowser()
+```
+
 - `(*DevBrowser) SetHeadless(headless bool)`: Configure whether the browser runs in headless mode (without a visible UI).
 	- Signature: `func (b *DevBrowser) SetHeadless(headless bool)`
 	- Default: `false` (shows the browser window). This is convenient for local development and debugging.
