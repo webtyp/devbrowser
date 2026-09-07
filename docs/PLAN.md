@@ -5,8 +5,9 @@ REVIEWER: none
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
-> **Blocked until `webtyp.com/server/httpd` exports `DevCertSPKI()`** — stage 4
-> of https://github.com/webtyp/server/blob/main/docs/PLAN.md.
+> **UNBLOCKED (2026-09-07).** `webtyp.com/server/httpd` now exports
+> `DevCertSPKI()` (`server/httpd/spki.go:15`). This plan was dispatched but never
+> completed, and it is the direct cause of a live bug — see below.
 
 ## Prerequisite — install the test runner
 
@@ -22,6 +23,29 @@ Never call `go test` directly: `gotest` handles `-vet`, `-race`, `-cover`, the
 WASM suite and the README badges.
 
 # Plan — trust the development certificate without touching the OS
+
+## The live bug this fixes
+
+`webtyp dev` in a project cannot open its own browser:
+
+```
+13:10:03  SERVER   Starting Internal Server on port: 8080
+13:10:03  BROWSER  Error opening DevBrowser: error navigating to
+                   https://localhost:8080/: page load error
+                   net::ERR_CERT_AUTHORITY_INVALID
+```
+
+Reproduced against the running server:
+
+```
+$ curl    https://localhost:8080/     → exit 60 (unable to get local issuer certificate)
+$ curl -k https://localhost:8080/     → 200
+$ openssl … -issuer -subject          → issuer=O=WebTyp Dev CA, subject=O=WebTyp Dev CA
+```
+
+The server is correct; the certificate is a self-signed leaf, as designed. What
+is missing is this package telling Chrome to trust that one public key — the
+work this plan describes and which was never implemented.
 
 ## Context (the executing agent has none — read this fully)
 
@@ -149,12 +173,30 @@ needed and would invite a list nobody audits.
 `--disable-web-security`. If a future need seems to require one, that is a
 finding to report, not a flag to add.
 
-## Stage 3 — the caller
+## Stage 3 — the consumer-shaped test
 
-`webtyp.com/app` constructs the browser (`devbrowser.New(...)`). It must read
-`httpd.DevCertSPKI()` and pass it through. That call site is in another
-repository and is a follow-up, not part of this plan — but the field must be
-plainly documented so the wiring is obvious.
+The ecosystem rule: *an API is not published until a consumer-shaped test,
+inside the library itself, proves it.* The last attempt at this feature shipped
+`DevCertSPKI()` in `httpd` with only an isolated test, so nothing noticed that
+no consumer ever called it. Do not repeat that here.
+
+Add a test in this package that goes through the real path a consumer uses:
+
+```go
+// The value a consumer actually passes comes from httpd.DevCertSPKI(). This
+// test uses a fixed 44-character base64 string of the same shape, asserts it
+// reaches the allocator verbatim, and asserts the flag name is the SPKI list
+// and not a blanket bypass.
+```
+
+It must fail if the flag is dropped, renamed, or replaced by
+`--ignore-certificate-errors`.
+
+The wiring in `webtyp.com/app` — reading `httpd.DevCertSPKI()` and passing it to
+`devbrowser.New` — is tracked in
+https://github.com/webtyp/app/blob/main/docs/PLAN.md. It is a separate
+repository, but this plan is worthless without it: **both must land** before
+`webtyp dev` opens a browser again.
 
 ## Constraints
 
@@ -186,5 +228,6 @@ a test that starts a browser is not acceptable here.
 |---|---|---|---|
 | 1 | config field | `config.go` | compiles |
 | 2 | flag + extracted option builder | `context.go` | tests 1, 2, 3 |
+| 3 | consumer-shaped test | `context_test.go` | fails when the flag is dropped |
 
 Sequential.
