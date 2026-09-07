@@ -2,8 +2,9 @@
 PLAN: "feat: trust the dev TLS certificate by SPKI pin, no CA installation"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 11329728704485740247
+PR: https://github.com/webtyp/devbrowser/pull/14
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
