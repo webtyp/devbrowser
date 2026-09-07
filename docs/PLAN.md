@@ -2,6 +2,8 @@
 PLAN: "feat: trust the dev TLS certificate by SPKI pin, no CA installation"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 11329728704485740247
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
