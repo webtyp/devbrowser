@@ -1,117 +1,93 @@
 ---
-PLAN: "fix: device-emulation test asserts on the developer's monitor size"
-EXECUTOR: local
+PLAN: "chore: drop the Schema()/Pointers() stubs from list types"
+EXECUTOR: jules
 REVIEWER: none
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
+>
+> **Phase C** of
+> [`LIST_CONTRACT_MASTER_PLAN.md`](https://github.com/webtyp/docs/blob/main/LIST_CONTRACT_MASTER_PLAN.md).
+> Runs in parallel with the other phase-C repos.
+>
+> **Depends on phase A** (`webtyp.com/model`) and **phase B** (`webtyp.com/ormc`).
+> As the first line of work: `go get webtyp.com/model@latest`. Never add a
+> `replace`, never invent a version.
 
-## Prerequisite — install the test runner
+# Plan — `webtyp.com/devbrowser`: a list stops claiming it has columns
 
-External agents run in isolated environments where `gotest` is not installed.
-Run this **before anything else**; the acceptance criteria depend on it:
+## 0. Context (verified against the repo — do not re-diagnose)
 
-```bash
-go install webtyp.com/devflow/cmd/gotest@latest
-```
-
-Then use `gotest` for the whole suite and `gotest -run TestName` for one test.
-Never call `go test` directly.
-
-# Plan — make `TestDeviceEmulation_ValidationAndDistinctModes` deterministic
-
-## The defect
-
-`tests/device_emulation_test.go:139` fails intermittently and has blocked three
-consecutive publishes of this module:
-
-```
-device_emulation_test.go:139: off must not pin the desktop viewport; desktop and
-off would be indistinguishable. off reply: Device emulation set to off (viewport 1440x900)
-```
-
-The assertion is:
+`model.FielderSlice` used to embed `model.Fielder`, so every list type had to
+answer "what are your columns?" — a question a sequence of rows cannot have.
+`ormc` therefore emitted, on every generated list:
 
 ```go
-// desktop pins 1440x900; off clears the override and reports the real
-// window size. Asserting the two reported viewports differ catches a
-// regression where the two modes collapse into the same action list.
-if strings.Contains(resultTextOff, "viewport 1440x900") {
-    t.Errorf("off must not pin the desktop viewport; …")
-}
+func (s *XList) Schema() []model.Field { return nil }
+func (s *XList) Pointers() []any       { return nil }
 ```
 
-### The real root cause — worse than "it depends on the monitor"
+Nothing ever called them: the json codec reaches rows through
+`Len()`/`At()`/`Append()` and type-asserts the **element**, never the list.
 
-**The test's own previous step creates the condition this step forbids.**
+The harm is that having them made the lie true for the compiler. A list
+satisfies `model.Fielder`, so `Accepts(&XList{})` compiles and
+`mcp/tool_schema.go` believes it, publishing the tool **advertising that it
+takes no arguments** — no error, no log.
 
-Step 2 sets mode `desktop`. In `mcp-management.go` that path calls
-`GrowWindowToFit(1440, 900)`, and `window_autofit.go` documents that it
-"resizes the live physical browser window, in place, so it is at least
-(reqW, reqH) … **and never shrinks it**".
+Phase A narrowed `FielderSlice` to `Len`/`At`/`Append`; phase B stopped `ormc`
+emitting the two stubs. This repo now carries them as dead weight. Removing them
+is what closes the hole **here**: until it regenerates, its list types still
+satisfy `model.Fielder`.
 
-Step 3 then sets mode `off`, which pins nothing and reads the viewport back with
-`chromedp.Evaluate("window.innerWidth")` — the **real** window. That window was
-just grown to fit exactly 1440×900 and never shrinks, so on most machines it now
-reads exactly 1440×900.
+**This is not a size optimization.** Measured: ~27 bytes per list type, 0,02 %
+of a real WASM client. Do not justify or scope this change by binary size.
 
-The assertion "off must not report 1440x900" therefore fails on **correct
-behaviour that the test itself caused two steps earlier**. It passed only when
-the display, DPI or DevTools reservation happened to push the window past
-1440×900 — which is why it looked intermittent.
+**Anti-footgun.** Do NOT remove the `EncodeFields`/`DecodeFields` no-ops from
+list types. `json.Encode` takes a `model.Encodable`, so deleting those breaks
+every call that serializes a list. That alternative was measured and rejected.
+`Len`, `At` and `Append` are the whole slice contract now and must survive
+untouched.
 
-The intent is right: `desktop` and `off` must be distinct branches. The
-mechanism is not — a reported pixel size cannot carry that meaning here.
+## Quality rules
 
-## Design gate
+```
+RULE: never hand-edit a generated *_orm.go — run the generator.
+RULE: every repeated string is a named constant; string literals forbidden in logic.
+RULE: this repo's behaviour must not change; only dead methods disappear.
+```
 
-Not required — this changes no public API. It changes one test's assertion.
+## Stage 1 — regenerate with the new `ormc`
 
-## The fix
+**Files:** `models_orm.go` (22 list types).
 
-Assert the invariant on the **stored mode**, which is what actually distinguishes
-the branches and is deterministic on every machine.
-
-`mcp-management.go` assigns `b.ViewportMode = args.Mode` before applying the
-emulation: `desktop` pins an override, `off` clears it. Asserting that is exact,
-needs no window, and cannot be defeated by autofit.
-
-In `tests/device_emulation_test.go`, the `desktop` reply is already captured
-earlier in the same test. Replace the `1440x900` check with:
-
-1. After step 2, assert `db.ViewportMode == "desktop"`.
-2. After step 3, assert `db.ViewportMode == "off"` — this replaces the
-   `1440x900` negative check entirely.
-3. Keep the positive assertions: `desktop` reports `viewport 1440x900` (it pins,
-   so this is deterministic) and `off` still reports some `viewport `.
-4. Replace the misleading comment with the mechanism above, so the next reader
-   does not reintroduce the same assertion.
-
-**Do not** fix this by pinning the window size in the test, by skipping the test
-on some machines, or by deleting the assertion. The first makes `off` untestable
-for what it does, the second hides the case, the third loses the regression
-guard.
-
-## Constraints
-
-- One file changes: `tests/device_emulation_test.go`.
-- No production code changes. If the fix appears to need one, stop and report —
-  that would mean the defect is in the implementation, not the test, and this
-  plan would be wrong.
-- Standard library only in tests (skill: testing): no assertion libraries.
+1. `go get webtyp.com/model@latest` so `FielderSlice` is the narrowed one.
+2. Run `ormc` at the repo root. It rewrites the generated file(s) in place; the
+   header is `DO NOT EDIT. generated by webtyp.com/ormc`.
+3. Confirm the diff contains **only** removals of the two stub methods —
+   22 `Schema()` and 22 `Pointers()` lines — and nothing else. If
+   any other line moved, the installed `ormc` predates phase B: stop and say so
+   in the PR instead of committing the drift.
 
 ## Acceptance criteria
 
-1. `gotest` passes.
-2. `gotest -run TestDeviceEmulation_ValidationAndDistinctModes` passes when run
-   ten times in a row (`for i in $(seq 10); do gotest -run … || break; done`).
-3. `grep -n "1440x900" tests/device_emulation_test.go` → present only in the
-   assertion about `desktop`, never in one about `off`.
+1. `go build ./...`, `go vet ./...`, `go test ./...` green.
+2. `grep -rn "List) Schema() \[\]model.Field" --include='*.go' .` → empty.
+3. `grep -rn "List) Pointers()" --include='*.go' .` → empty.
+4. `grep -rnc "Append() model.Fielder" --include='*.go' .` → unchanged from
+   before the change: the traversal contract survived.
+5. `go.mod` requires the phase A tag of `webtyp.com/model`; no `replace`.
+6. `grep -rn "TODO\|FIXME\|Deprecated" --include='*.go' .` → only hits that
+   predate this change.
 
-## Stages
+## Out of scope
 
-| # | Stage | File(s) | Gate |
-|---|---|---|---|
-| 1 | `viewportOf` helper + reworked assertions | `tests/device_emulation_test.go` | criteria 1, 2, 3 |
+- Changing `model.FielderSlice` itself — phase A, already shipped.
+- Changing what `ormc` emits — phase B, already shipped.
+- Removing the `EncodeFields`/`DecodeFields` no-ops — measured and rejected.
+- Any behaviour change in this repo. If a test fails, the cause is upstream:
+  report it, do not paper over it here.
 
-Single stage.
+| Stage | Files | Action |
+|---|---|---|
+| 1 | `models_orm.go` | regenerate with `ormc`; 22 stub pairs disappear |

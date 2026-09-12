@@ -28,8 +28,6 @@ func (m *ScreenshotArgs) DecodeFields(r model.FieldReader) {
 
 type ScreenshotArgsList []*ScreenshotArgs
 
-func (s *ScreenshotArgsList) Schema() []model.Field { return nil }
-func (s *ScreenshotArgsList) Pointers() []any     { return nil }
 func (s *ScreenshotArgsList) Len() int             { return len(*s) }
 func (s *ScreenshotArgsList) At(i int) model.Fielder { return (*s)[i] }
 func (s *ScreenshotArgsList) Append() model.Fielder  { v := &ScreenshotArgs{}; *s = append(*s, v); return v }
@@ -69,8 +67,6 @@ func (m *ClickElementArgs) DecodeFields(r model.FieldReader) {
 
 type ClickElementArgsList []*ClickElementArgs
 
-func (s *ClickElementArgsList) Schema() []model.Field { return nil }
-func (s *ClickElementArgsList) Pointers() []any     { return nil }
 func (s *ClickElementArgsList) Len() int             { return len(*s) }
 func (s *ClickElementArgsList) At(i int) model.Fielder { return (*s)[i] }
 func (s *ClickElementArgsList) Append() model.Fielder  { v := &ClickElementArgs{}; *s = append(*s, v); return v }
@@ -104,8 +100,6 @@ func (m *NavigateArgs) DecodeFields(r model.FieldReader) {
 
 type NavigateArgsList []*NavigateArgs
 
-func (s *NavigateArgsList) Schema() []model.Field { return nil }
-func (s *NavigateArgsList) Pointers() []any     { return nil }
 func (s *NavigateArgsList) Len() int             { return len(*s) }
 func (s *NavigateArgsList) At(i int) model.Fielder { return (*s)[i] }
 func (s *NavigateArgsList) Append() model.Fielder  { v := &NavigateArgs{}; *s = append(*s, v); return v }
@@ -148,8 +142,6 @@ func (m *EmulateDeviceArgs) DecodeFields(r model.FieldReader) {
 
 type EmulateDeviceArgsList []*EmulateDeviceArgs
 
-func (s *EmulateDeviceArgsList) Schema() []model.Field { return nil }
-func (s *EmulateDeviceArgsList) Pointers() []any     { return nil }
 func (s *EmulateDeviceArgsList) Len() int             { return len(*s) }
 func (s *EmulateDeviceArgsList) At(i int) model.Fielder { return (*s)[i] }
 func (s *EmulateDeviceArgsList) Append() model.Fielder  { v := &EmulateDeviceArgs{}; *s = append(*s, v); return v }
@@ -183,8 +175,6 @@ func (m *AuditMobileArgs) DecodeFields(r model.FieldReader) {
 
 type AuditMobileArgsList []*AuditMobileArgs
 
-func (s *AuditMobileArgsList) Schema() []model.Field { return nil }
-func (s *AuditMobileArgsList) Pointers() []any     { return nil }
 func (s *AuditMobileArgsList) Len() int             { return len(*s) }
 func (s *AuditMobileArgsList) At(i int) model.Fielder { return (*s)[i] }
 func (s *AuditMobileArgsList) Append() model.Fielder  { v := &AuditMobileArgs{}; *s = append(*s, v); return v }
@@ -218,8 +208,6 @@ func (m *GetConsoleArgs) DecodeFields(r model.FieldReader) {
 
 type GetConsoleArgsList []*GetConsoleArgs
 
-func (s *GetConsoleArgsList) Schema() []model.Field { return nil }
-func (s *GetConsoleArgsList) Pointers() []any     { return nil }
 func (s *GetConsoleArgsList) Len() int             { return len(*s) }
 func (s *GetConsoleArgsList) At(i int) model.Fielder { return (*s)[i] }
 func (s *GetConsoleArgsList) Append() model.Fielder  { v := &GetConsoleArgs{}; *s = append(*s, v); return v }
@@ -262,8 +250,6 @@ func (m *FillElementArgs) DecodeFields(r model.FieldReader) {
 
 type FillElementArgsList []*FillElementArgs
 
-func (s *FillElementArgsList) Schema() []model.Field { return nil }
-func (s *FillElementArgsList) Pointers() []any     { return nil }
 func (s *FillElementArgsList) Len() int             { return len(*s) }
 func (s *FillElementArgsList) At(i int) model.Fielder { return (*s)[i] }
 func (s *FillElementArgsList) Append() model.Fielder  { v := &FillElementArgs{}; *s = append(*s, v); return v }
@@ -303,8 +289,6 @@ func (m *SwipeElementArgs) DecodeFields(r model.FieldReader) {
 
 type SwipeElementArgsList []*SwipeElementArgs
 
-func (s *SwipeElementArgsList) Schema() []model.Field { return nil }
-func (s *SwipeElementArgsList) Pointers() []any     { return nil }
 func (s *SwipeElementArgsList) Len() int             { return len(*s) }
 func (s *SwipeElementArgsList) At(i int) model.Fielder { return (*s)[i] }
 func (s *SwipeElementArgsList) Append() model.Fielder  { v := &SwipeElementArgs{}; *s = append(*s, v); return v }
@@ -341,8 +325,6 @@ func (m *EvaluateJSArgs) DecodeFields(r model.FieldReader) {
 
 type EvaluateJSArgsList []*EvaluateJSArgs
 
-func (s *EvaluateJSArgsList) Schema() []model.Field { return nil }
-func (s *EvaluateJSArgsList) Pointers() []any     { return nil }
 func (s *EvaluateJSArgsList) Len() int             { return len(*s) }
 func (s *EvaluateJSArgsList) At(i int) model.Fielder { return (*s)[i] }
 func (s *EvaluateJSArgsList) Append() model.Fielder  { v := &EvaluateJSArgs{}; *s = append(*s, v); return v }
@@ -379,8 +361,6 @@ func (m *GetNetworkLogsArgs) DecodeFields(r model.FieldReader) {
 
 type GetNetworkLogsArgsList []*GetNetworkLogsArgs
 
-func (s *GetNetworkLogsArgsList) Schema() []model.Field { return nil }
-func (s *GetNetworkLogsArgsList) Pointers() []any     { return nil }
 func (s *GetNetworkLogsArgsList) Len() int             { return len(*s) }
 func (s *GetNetworkLogsArgsList) At(i int) model.Fielder { return (*s)[i] }
 func (s *GetNetworkLogsArgsList) Append() model.Fielder  { v := &GetNetworkLogsArgs{}; *s = append(*s, v); return v }
@@ -414,8 +394,6 @@ func (m *GetErrorsArgs) DecodeFields(r model.FieldReader) {
 
 type GetErrorsArgsList []*GetErrorsArgs
 
-func (s *GetErrorsArgsList) Schema() []model.Field { return nil }
-func (s *GetErrorsArgsList) Pointers() []any     { return nil }
 func (s *GetErrorsArgsList) Len() int             { return len(*s) }
 func (s *GetErrorsArgsList) At(i int) model.Fielder { return (*s)[i] }
 func (s *GetErrorsArgsList) Append() model.Fielder  { v := &GetErrorsArgs{}; *s = append(*s, v); return v }
@@ -446,8 +424,6 @@ func (m *GetPerformanceArgs) DecodeFields(r model.FieldReader) {
 
 type GetPerformanceArgsList []*GetPerformanceArgs
 
-func (s *GetPerformanceArgsList) Schema() []model.Field { return nil }
-func (s *GetPerformanceArgsList) Pointers() []any     { return nil }
 func (s *GetPerformanceArgsList) Len() int             { return len(*s) }
 func (s *GetPerformanceArgsList) At(i int) model.Fielder { return (*s)[i] }
 func (s *GetPerformanceArgsList) Append() model.Fielder  { v := &GetPerformanceArgs{}; *s = append(*s, v); return v }
@@ -478,8 +454,6 @@ func (m *GetContentArgs) DecodeFields(r model.FieldReader) {
 
 type GetContentArgsList []*GetContentArgs
 
-func (s *GetContentArgsList) Schema() []model.Field { return nil }
-func (s *GetContentArgsList) Pointers() []any     { return nil }
 func (s *GetContentArgsList) Len() int             { return len(*s) }
 func (s *GetContentArgsList) At(i int) model.Fielder { return (*s)[i] }
 func (s *GetContentArgsList) Append() model.Fielder  { v := &GetContentArgs{}; *s = append(*s, v); return v }
@@ -513,8 +487,6 @@ func (m *GetSourceArgs) DecodeFields(r model.FieldReader) {
 
 type GetSourceArgsList []*GetSourceArgs
 
-func (s *GetSourceArgsList) Schema() []model.Field { return nil }
-func (s *GetSourceArgsList) Pointers() []any     { return nil }
 func (s *GetSourceArgsList) Len() int             { return len(*s) }
 func (s *GetSourceArgsList) At(i int) model.Fielder { return (*s)[i] }
 func (s *GetSourceArgsList) Append() model.Fielder  { v := &GetSourceArgs{}; *s = append(*s, v); return v }
@@ -548,8 +520,6 @@ func (m *InspectElementArgs) DecodeFields(r model.FieldReader) {
 
 type InspectElementArgsList []*InspectElementArgs
 
-func (s *InspectElementArgsList) Schema() []model.Field { return nil }
-func (s *InspectElementArgsList) Pointers() []any     { return nil }
 func (s *InspectElementArgsList) Len() int             { return len(*s) }
 func (s *InspectElementArgsList) At(i int) model.Fielder { return (*s)[i] }
 func (s *InspectElementArgsList) Append() model.Fielder  { v := &InspectElementArgs{}; *s = append(*s, v); return v }
@@ -586,8 +556,6 @@ func (m *GetStylesArgs) DecodeFields(r model.FieldReader) {
 
 type GetStylesArgsList []*GetStylesArgs
 
-func (s *GetStylesArgsList) Schema() []model.Field { return nil }
-func (s *GetStylesArgsList) Pointers() []any     { return nil }
 func (s *GetStylesArgsList) Len() int             { return len(*s) }
 func (s *GetStylesArgsList) At(i int) model.Fielder { return (*s)[i] }
 func (s *GetStylesArgsList) Append() model.Fielder  { v := &GetStylesArgs{}; *s = append(*s, v); return v }
@@ -621,8 +589,6 @@ func (m *GetStorageArgs) DecodeFields(r model.FieldReader) {
 
 type GetStorageArgsList []*GetStorageArgs
 
-func (s *GetStorageArgsList) Schema() []model.Field { return nil }
-func (s *GetStorageArgsList) Pointers() []any     { return nil }
 func (s *GetStorageArgsList) Len() int             { return len(*s) }
 func (s *GetStorageArgsList) At(i int) model.Fielder { return (*s)[i] }
 func (s *GetStorageArgsList) Append() model.Fielder  { v := &GetStorageArgs{}; *s = append(*s, v); return v }
@@ -656,8 +622,6 @@ func (m *GetAssetArgs) DecodeFields(r model.FieldReader) {
 
 type GetAssetArgsList []*GetAssetArgs
 
-func (s *GetAssetArgsList) Schema() []model.Field { return nil }
-func (s *GetAssetArgsList) Pointers() []any     { return nil }
 func (s *GetAssetArgsList) Len() int             { return len(*s) }
 func (s *GetAssetArgsList) At(i int) model.Fielder { return (*s)[i] }
 func (s *GetAssetArgsList) Append() model.Fielder  { v := &GetAssetArgs{}; *s = append(*s, v); return v }
@@ -697,8 +661,6 @@ func (m *InterceptRequestArgs) DecodeFields(r model.FieldReader) {
 
 type InterceptRequestArgsList []*InterceptRequestArgs
 
-func (s *InterceptRequestArgsList) Schema() []model.Field { return nil }
-func (s *InterceptRequestArgsList) Pointers() []any     { return nil }
 func (s *InterceptRequestArgsList) Len() int             { return len(*s) }
 func (s *InterceptRequestArgsList) At(i int) model.Fielder { return (*s)[i] }
 func (s *InterceptRequestArgsList) Append() model.Fielder  { v := &InterceptRequestArgs{}; *s = append(*s, v); return v }
@@ -735,8 +697,6 @@ func (m *OpenBrowserArgs) DecodeFields(r model.FieldReader) {
 
 type OpenBrowserArgsList []*OpenBrowserArgs
 
-func (s *OpenBrowserArgsList) Schema() []model.Field { return nil }
-func (s *OpenBrowserArgsList) Pointers() []any     { return nil }
 func (s *OpenBrowserArgsList) Len() int             { return len(*s) }
 func (s *OpenBrowserArgsList) At(i int) model.Fielder { return (*s)[i] }
 func (s *OpenBrowserArgsList) Append() model.Fielder  { v := &OpenBrowserArgs{}; *s = append(*s, v); return v }
@@ -767,8 +727,6 @@ func (m *CloseBrowserArgs) DecodeFields(r model.FieldReader) {
 
 type CloseBrowserArgsList []*CloseBrowserArgs
 
-func (s *CloseBrowserArgsList) Schema() []model.Field { return nil }
-func (s *CloseBrowserArgsList) Pointers() []any     { return nil }
 func (s *CloseBrowserArgsList) Len() int             { return len(*s) }
 func (s *CloseBrowserArgsList) At(i int) model.Fielder { return (*s)[i] }
 func (s *CloseBrowserArgsList) Append() model.Fielder  { v := &CloseBrowserArgs{}; *s = append(*s, v); return v }
@@ -814,8 +772,6 @@ func (m *SaveScreenshotArgs) DecodeFields(r model.FieldReader) {
 
 type SaveScreenshotArgsList []*SaveScreenshotArgs
 
-func (s *SaveScreenshotArgsList) Schema() []model.Field { return nil }
-func (s *SaveScreenshotArgsList) Pointers() []any     { return nil }
 func (s *SaveScreenshotArgsList) Len() int             { return len(*s) }
 func (s *SaveScreenshotArgsList) At(i int) model.Fielder { return (*s)[i] }
 func (s *SaveScreenshotArgsList) Append() model.Fielder  { v := &SaveScreenshotArgs{}; *s = append(*s, v); return v }
@@ -826,3 +782,4 @@ func (s *SaveScreenshotArgsList) DecodeFields(_ model.FieldReader) {}
 func (m *SaveScreenshotArgs) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
+
