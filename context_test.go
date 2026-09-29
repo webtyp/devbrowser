@@ -61,6 +61,17 @@ func TestBuildAllocatorOptions_SPKI(t *testing.T) {
 		}
 	})
 
+	// The SPKI flag is "unsupported" in Chrome's eyes, so without test-type every
+	// dev window opens under a yellow "You are using an unsupported command-line
+	// flag … Stability and security will suffer." bar.
+	t.Run("set TrustDevCertSPKI -> test-type hides the unsupported-flag infobar", func(t *testing.T) {
+		b := &DevBrowser{TrustDevCertSPKI: "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="}
+		flags := parseExecAllocatorOptions(b.buildAllocatorOptions())
+		if val, exists := flags[flagTestType]; !exists || val != true {
+			t.Errorf("expected flag %s=true, got %v (present=%v)", flagTestType, val, exists)
+		}
+	})
+
 	t.Run("security regression guard -> no blanket bypass flags", func(t *testing.T) {
 		b := &DevBrowser{
 			TrustDevCertSPKI: "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=",

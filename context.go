@@ -11,6 +11,11 @@ import (
 // It is NOT --ignore-certificate-errors: verification stays on everywhere else.
 const FlagSPKIList = "ignore-certificate-errors-spki-list"
 
+// flagTestType hides Chrome's "You are using an unsupported command-line flag"
+// infobar, which FlagSPKIList would otherwise trigger in every dev window. It
+// changes UI only: certificate verification and every other check stay on.
+const flagTestType = "test-type"
+
 func (h *DevBrowser) buildAllocatorOptions() []chromedp.ExecAllocatorOption {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", h.Headless),
@@ -47,7 +52,10 @@ func (h *DevBrowser) buildAllocatorOptions() []chromedp.ExecAllocatorOption {
 	}
 
 	if h.TrustDevCertSPKI != "" {
-		opts = append(opts, chromedp.Flag(FlagSPKIList, h.TrustDevCertSPKI))
+		opts = append(opts,
+			chromedp.Flag(FlagSPKIList, h.TrustDevCertSPKI),
+			chromedp.Flag(flagTestType, true),
+		)
 	}
 
 	// Resolve the Chrome executable path
