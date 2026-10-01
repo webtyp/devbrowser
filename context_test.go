@@ -8,7 +8,7 @@ import (
 	"webtyp.com/devbrowser/chromedp"
 )
 
-// The value a consumer actually passes comes from httpd.DevCertSPKI(). This
+// The value a consumer actually passes comes from httpd.LocalCertSPKI(). This
 // test uses a fixed 44-character base64 string of the same shape, asserts it
 // reaches the allocator verbatim, and asserts the flag name is the SPKI list
 // and not a blanket bypass.

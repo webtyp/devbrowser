@@ -35,7 +35,7 @@ type DevBrowser struct {
 	// SubjectPublicKeyInfo. When set, the launched browser trusts exactly that
 	// public key; verification stays on for every other origin.
 	//
-	// Obtain it from webtyp.com/server/httpd.DevCertSPKI(). Empty = no pin.
+	// Obtain it from webtyp.com/server/httpd.LocalCertSPKI(). Empty = no pin.
 	TrustDevCertSPKI string
 
 	// DevToolsReserved is true when auto-open-devtools-for-tabs was launched
