@@ -66,15 +66,6 @@ func (b *DevBrowser) LoadConfig() {
 
 // SaveConfig saves all browser configuration to the store
 func (b *DevBrowser) SaveConfig() error {
-	// Save auto-start
-	val := "f"
-	if b.AutoStart {
-		val = "t"
-	}
-	if err := b.DB.Set(StoreKeyBrowserAutostart, val); err != nil {
-		return err
-	}
-
 	// Save position
 	if err := b.DB.Set(StoreKeyBrowserPosition, b.Position); err != nil {
 		return err
@@ -86,14 +77,18 @@ func (b *DevBrowser) SaveConfig() error {
 		return err
 	}
 
-	// Save viewport mode
-	if err := b.DB.Set(StoreKeyViewportMode, b.ViewportMode); err != nil {
-		return err
+	// Save viewport mode only when non-empty
+	if b.ViewportMode != "" {
+		if err := b.DB.Set(StoreKeyViewportMode, b.ViewportMode); err != nil {
+			return err
+		}
 	}
 
-	// Save viewport device
-	if err := b.DB.Set(StoreKeyViewportDevice, b.ViewportDevice); err != nil {
-		return err
+	// Save viewport device only when non-empty
+	if b.ViewportDevice != "" {
+		if err := b.DB.Set(StoreKeyViewportDevice, b.ViewportDevice); err != nil {
+			return err
+		}
 	}
 
 	return nil
