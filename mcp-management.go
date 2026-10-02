@@ -16,7 +16,7 @@ func (b *DevBrowser) GetManagementTools() []mcp.Tool {
 	return []mcp.Tool{
 		{
 			Name:        "browser_emulate_device",
-			Description: "Emulate a mobile device, tablet, or named device viewport. Also grows the physical window live (never shrinks) so the requested viewport is fully visible instead of being covered by DevTools — window position and any pre-existing size are preserved as a floor. This toggle affects rendering and touch events. This change is persisted.",
+			Description: "Emulate mobile, tablet, or desktop viewport. Adapts naturally to the current browser window and Chrome DevTools without forcing artificial window resizing. This change is persisted in browser_viewport.",
 			Args:        new(EmulateDeviceArgs),
 			Resource:    "browser",
 			Action:      'u',
@@ -56,12 +56,6 @@ func (b *DevBrowser) GetManagementTools() []mcp.Tool {
 
 				var actualW, actualH int
 				if b.IsOpen() && b.Ctx != nil {
-					if reqW, reqH, _ := EmulationViewportSize(args.Mode, args.Device); reqW > 0 && reqH > 0 {
-						if _, err := b.GrowWindowToFit(reqW, reqH); err != nil {
-							b.Logger(fmt.Sprintf("Failed to grow window for emulation: %v", err))
-						}
-					}
-
 					if err := b.applyDeviceEmulation(); err != nil {
 						return nil, err
 					}
@@ -124,41 +118,73 @@ func (b *DevBrowser) applyDeviceEmulation() error {
 	devName := b.ViewportDevice
 	b.Mu.Unlock()
 
-	var actions []chromedp.Action
+	// Clear any previous metrics override to measure unconstrained window
+	if err := chromedp.Run(b.Ctx,
+		emulation.ClearDeviceMetricsOverride(),
+		emulation.SetTouchEmulationEnabled(false),
+		emulation.SetUserAgentOverride(""),
+	); err != nil {
+		return err
+	}
 
 	if devName != "" {
 		d, _, err := resolveDevice(devName)
 		if err != nil {
 			return err
 		}
-		actions = append(actions, chromedp.Emulate(d))
-	} else {
-		switch mode {
-		case "mobile":
-			actions = append(actions, chromedp.Emulate(device.IPhone15ProMax))
-		case "tablet":
-			actions = append(actions, chromedp.Emulate(device.IPadPro))
-		case "desktop", "off", "":
-			// Clear overrides by resetting device metrics and user agent,
-			// allowing the browser layout to adjust naturally to the window size and DevTools.
-			actions = append(actions,
-				emulation.ClearDeviceMetricsOverride(),
-				emulation.SetTouchEmulationEnabled(false),
-				emulation.SetUserAgentOverride(""),
-			)
-		default:
-			return fmt.Errorf("unsupported mode: %s", mode)
-		}
+		return chromedp.Run(b.Ctx, chromedp.Emulate(d))
 	}
 
-	return chromedp.Run(b.Ctx, actions...)
+	switch mode {
+	case "desktop", "off", "":
+		// Clear overrides: layout adjusts naturally to window size and DevTools
+		return nil
+
+	case "mobile", "tablet":
+		// Read available inner dimensions inside Chrome (respects DevTools docked on right/bottom)
+		var availW, availH int
+		if err := chromedp.Run(b.Ctx,
+			chromedp.Evaluate(`window.innerWidth`, &availW),
+			chromedp.Evaluate(`window.innerHeight`, &availH),
+		); err != nil {
+			return err
+		}
+
+		if availW <= 0 || availH <= 0 {
+			return nil
+		}
+
+		var targetW int
+		var ua string
+
+		if mode == "mobile" {
+			targetW = 375
+			if availW < targetW {
+				targetW = availW
+			}
+			ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+		} else { // tablet
+			targetW = 768
+			if availW < targetW {
+				targetW = availW
+			}
+			ua = "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+		}
+
+		// Apply override: target width + 0 height (0 disables height override so height
+		// tracks the available window & Chrome DevTools naturally without overflowing or cutting off)
+		return chromedp.Run(b.Ctx,
+			emulation.SetDeviceMetricsOverride(int64(targetW), 0, 1.0, true),
+			emulation.SetTouchEmulationEnabled(true),
+			emulation.SetUserAgentOverride(ua),
+		)
+
+	default:
+		return fmt.Errorf("unsupported mode: %s", mode)
+	}
 }
 
-// EmulationViewportSize returns the CSS pixel viewport size that mode/devName
-// will render at once applied by applyDeviceEmulation, so the physical
-// window can be grown to fit BEFORE the CDP emulation override is issued.
-// Keep this in sync with the switch in applyDeviceEmulation — same modes,
-// same device shortcuts.
+// EmulationViewportSize returns the CSS pixel viewport size for a given mode or device name.
 func EmulationViewportSize(mode, devName string) (int, int, error) {
 	if devName != "" {
 		d, _, err := resolveDevice(devName)
@@ -171,11 +197,9 @@ func EmulationViewportSize(mode, devName string) (int, int, error) {
 
 	switch mode {
 	case "mobile":
-		info := device.IPhone15ProMax.Device()
-		return int(info.Width), int(info.Height), nil
+		return 375, 0, nil
 	case "tablet":
-		info := device.IPadPro.Device()
-		return int(info.Width), int(info.Height), nil
+		return 768, 0, nil
 	case "desktop", "off", "":
 		return 0, 0, nil
 	default:

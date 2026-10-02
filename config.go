@@ -6,11 +6,11 @@ import (
 
 // Store keys for browser configuration
 const (
-	StoreKeyBrowserAutostart = "browser_autostart"
-	StoreKeyBrowserPosition  = "browser_position"
-	StoreKeyBrowserSize      = "browser_size"
-	StoreKeyViewportMode     = "viewport_mode"
-	StoreKeyViewportDevice   = "viewport_device"
+	StoreKeyBrowserAutostart   = "browser_autostart"
+	StoreKeyBrowserPosition    = "browser_position"
+	StoreKeyBrowserSize        = "browser_size"
+	StoreKeyBrowserViewport    = "browser_viewport"
+	StoreKeyLegacyViewportMode = "viewport_mode" // legacy fallback
 )
 
 // LoadConfig loads all browser configuration from the store
@@ -53,14 +53,12 @@ func (b *DevBrowser) LoadConfig() {
 		}
 	}
 
-	// Load viewport mode
-	if mode, err := b.DB.Get(StoreKeyViewportMode); err == nil && mode != "" {
+	// Load browser viewport (with fallback to legacy viewport_mode)
+	if mode, err := b.DB.Get(StoreKeyBrowserViewport); err == nil && mode != "" {
 		b.ViewportMode = mode
-	}
-
-	// Load viewport device
-	if device, err := b.DB.Get(StoreKeyViewportDevice); err == nil && device != "" {
-		b.ViewportDevice = device
+	} else if legacyMode, err := b.DB.Get(StoreKeyLegacyViewportMode); err == nil && legacyMode != "" {
+		b.ViewportMode = legacyMode
+		_ = b.DB.Set(StoreKeyBrowserViewport, legacyMode)
 	}
 }
 
@@ -77,18 +75,13 @@ func (b *DevBrowser) SaveConfig() error {
 		return err
 	}
 
-	// Save viewport mode only when non-empty
-	if b.ViewportMode != "" {
-		if err := b.DB.Set(StoreKeyViewportMode, b.ViewportMode); err != nil {
-			return err
-		}
+	// Save browser viewport (desktop, mobile, tablet)
+	mode := b.ViewportMode
+	if mode == "" || mode == "off" {
+		mode = "desktop"
 	}
-
-	// Save viewport device only when non-empty
-	if b.ViewportDevice != "" {
-		if err := b.DB.Set(StoreKeyViewportDevice, b.ViewportDevice); err != nil {
-			return err
-		}
+	if err := b.DB.Set(StoreKeyBrowserViewport, mode); err != nil {
+		return err
 	}
 
 	return nil

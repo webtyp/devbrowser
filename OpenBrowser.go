@@ -89,14 +89,8 @@ func (h *DevBrowser) OpenBrowser(port string, https bool) {
 		// Restore device emulation if set
 		h.Mu.Lock()
 		vMode := h.ViewportMode
-		vDevice := h.ViewportDevice
 		h.Mu.Unlock()
-		if vMode != "" && vMode != "off" {
-			if reqW, reqH, err := EmulationViewportSize(vMode, vDevice); err == nil && reqW > 0 && reqH > 0 {
-				if _, err := h.GrowWindowToFit(reqW, reqH); err != nil {
-					h.Logger(fmt.Sprintf("Failed to grow window for restored emulation: %v", err))
-				}
-			}
+		if vMode != "" && vMode != "off" && vMode != "desktop" {
 			if err := h.applyDeviceEmulation(); err != nil {
 				h.Logger(fmt.Sprintf("Failed to restore emulation: %v", err))
 			}

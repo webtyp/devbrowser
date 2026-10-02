@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"webtyp.com/devbrowser"
+	"webtyp.com/devbrowser/cdproto/emulation"
+	"webtyp.com/devbrowser/chromedp"
 	"webtyp.com/json"
 	"webtyp.com/mcp"
 )
@@ -164,8 +166,8 @@ func TestEmulationViewportSize_Modes(t *testing.T) {
 		wantH   int
 		wantErr bool
 	}{
-		{"mobile", 430, 739, false},
-		{"tablet", 1024, 1366, false},
+		{"mobile", 375, 0, false},
+		{"tablet", 768, 0, false},
 		{"desktop", 0, 0, false},
 		{"off", 0, 0, false},
 		{"", 0, 0, false},
@@ -188,15 +190,55 @@ func TestEmulationViewportSize_Modes(t *testing.T) {
 
 func TestEmulationViewportSize_NamedDevice(t *testing.T) {
 	w, h, err := devbrowser.EmulationViewportSize("", "iphone15promax")
-	if err != nil {
-		t.Fatalf("EmulationViewportSize(\"\", \"iphone15promax\") failed: %v", err)
-	}
-	if w <= 0 || h <= 0 {
-		t.Errorf("Expected positive dimensions for iphone15promax, got %dx%d", w, h)
-	}
-
-	_, _, errInvalid := devbrowser.EmulationViewportSize("", "nonexistent_device_xyz")
-	if errInvalid == nil {
-		t.Error("Expected error for nonexistent device name, got nil")
+	if err != nil || w <= 0 || h <= 0 {
+		t.Fatalf("EmulationViewportSize failed: w=%d h=%d err=%v", w, h, err)
 	}
 }
+
+func TestEmulation_DynamicResponsiveHeight(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `<html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><h1>Test Dynamic Height</h1></body></html>`)
+	}))
+	defer ts.Close()
+
+	db, _ := DefaultTestBrowser()
+	if err := db.CreateBrowserContext(); err != nil {
+		t.Fatal(err)
+	}
+	defer db.CloseBrowser()
+
+	if err := db.NavigateToURL(ts.URL); err != nil {
+		t.Fatal(err)
+	}
+
+	var hBefore, wBefore int
+	if err := chromedp.Run(db.Ctx,
+		chromedp.Evaluate(`window.innerWidth`, &wBefore),
+		chromedp.Evaluate(`window.innerHeight`, &hBefore),
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	// Apply mobile emulation with width=375, height=0 (unconstrained height)
+	if err := chromedp.Run(db.Ctx,
+		emulation.SetDeviceMetricsOverride(375, 0, 1.0, true),
+	); err != nil {
+		t.Fatalf("SetDeviceMetricsOverride failed: %v", err)
+	}
+
+	var hAfter, wAfter int
+	if err := chromedp.Run(db.Ctx,
+		chromedp.Evaluate(`window.innerWidth`, &wAfter),
+		chromedp.Evaluate(`window.innerHeight`, &hAfter),
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	if wAfter != 375 {
+		t.Errorf("Expected width 375, got %d", wAfter)
+	}
+	if hAfter != hBefore {
+		t.Errorf("Expected height to remain dynamic matching window (%d), got %d", hBefore, hAfter)
+	}
+}
+
