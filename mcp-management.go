@@ -12,11 +12,6 @@ import (
 	"webtyp.com/mcp"
 )
 
-const (
-	DesktopWidth  = 1440
-	DesktopHeight = 900
-)
-
 func (b *DevBrowser) GetManagementTools() []mcp.Tool {
 	return []mcp.Tool{
 		{
@@ -143,15 +138,9 @@ func (b *DevBrowser) applyDeviceEmulation() error {
 			actions = append(actions, chromedp.Emulate(device.IPhone15ProMax))
 		case "tablet":
 			actions = append(actions, chromedp.Emulate(device.IPadPro))
-		case "desktop":
-			actions = append(actions,
-				chromedp.EmulateViewport(DesktopWidth, DesktopHeight), // NOT EmulateMobile
-				emulation.SetTouchEmulationEnabled(false),
-			)
-		case "off", "":
-			// Clear overrides by emulating a standard desktop viewport
-			// We use ClearDeviceMetricsOverride to reset to the window size,
-			// allowing the browser layout to adjust naturally to DevTools.
+		case "desktop", "off", "":
+			// Clear overrides by resetting device metrics and user agent,
+			// allowing the browser layout to adjust naturally to the window size and DevTools.
 			actions = append(actions,
 				emulation.ClearDeviceMetricsOverride(),
 				emulation.SetTouchEmulationEnabled(false),
@@ -187,9 +176,7 @@ func EmulationViewportSize(mode, devName string) (int, int, error) {
 	case "tablet":
 		info := device.IPadPro.Device()
 		return int(info.Width), int(info.Height), nil
-	case "desktop":
-		return DesktopWidth, DesktopHeight, nil
-	case "off", "":
+	case "desktop", "off", "":
 		return 0, 0, nil
 	default:
 		return 0, 0, fmt.Errorf("unsupported mode: %s", mode)

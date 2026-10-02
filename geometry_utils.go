@@ -37,13 +37,13 @@ func (b *DevBrowser) CalculateConstrainedSize(reqW, reqH, monW, monH int) (int, 
 	return finalW, finalH
 }
 
-// startWithDetectedSize updates the browser size if it hasn't been configured yet
-// and we have detected a monitor size.
+// StartWithDetectedSize updates the browser size to the monitor size
+// if it hasn't been configured yet.
 func (b *DevBrowser) StartWithDetectedSize() {
 	b.Mu.Lock()
 	defer b.Mu.Unlock()
 
-	// If user already has a saved config, respect it (but apply constraints later)
+	// If user already has a saved config, respect it
 	if b.SizeConfigured {
 		return
 	}
@@ -53,45 +53,9 @@ func (b *DevBrowser) StartWithDetectedSize() {
 		return
 	}
 
-	// Logic for default size when nothing is configured:
-	// We want a reasonable default that fits.
-	// Default is 1024x768 in New().
-	// If monitor is smaller (e.g. mobile 375x...), default might be too big.
-
-	// So strictly speaking, we just run the constraint logic on the default.
-	// If the default 1024x768 fits, we keep it. Use cases:
-	// - Desktop (1920x1080): 1024x768 fits -> use default.
-	// - Tablet/Phone (e.g. 800x600 screen?): 1024x768 -> becomes 800x600.
-
-	// However, the user request says:
-	// "se necestia que se sepa de forma automatizada las medidas del monitor para tener
-	// como base el alto y ancho cuando este no ha sido configurado [...] asi arrancar con esa medida"
-	// This implies we might want to start MAXIMIZED or close to full screen if not configured?
-	// Or maybe just ensure it fits.
-
-	// "tomar las medidas del monitor como base":
-	// Let's interpret this as: define a sensible default based on monitor size.
-	// If it's a large screen, maybe we stick to a sensible "desktop" default (like 1280x800 or 1440x900).
-	// If it's small, we take the max available.
-
-	// Let's stick to the safer "ensure it fits" approach for now, which satisfies "adjust to them".
-	// But let's verify if "arrancar con esa medida" means full screen.
-	// Usually devs don't want full screen 4k browser on startup.
-	// Let's assume they want the Configured Default (1024x768) BUT guaranteed to fit.
-
-	newW, newH := b.CalculateConstrainedSize(b.Width, b.Height, b.MonitorWidth, b.MonitorHeight)
-
-	// If monitor is really big, maybe we can be bolder than 1024x768?
-	// The prompt says: "las medidas desktop,mobile, tablet no puedes superar ninguna de estas deben ser proporcional o ajaustarce a ellas"
-	// This confirms the constraint logic is the priority.
-
-	// Special case: If the "default" hasn't been touched, maybe we upgrade it to a better desktop size
-	// if the screen allows? 1024x768 is a bit old school.
-	// But let's safely just constrain for now.
-
-	b.Width = newW
-	b.Height = newH
-	b.Log(fmt.Sprintf("Browser size auto-adjusted to monitor: %dx%d", newW, newH))
+	b.Width = b.MonitorWidth
+	b.Height = b.MonitorHeight
+	b.Log(fmt.Sprintf("Browser size auto-adjusted to monitor: %dx%d", b.Width, b.Height))
 }
 
 // DevToolsReservedWidth is a conservative, documented ESTIMATE of the
@@ -147,20 +111,6 @@ func (b *DevBrowser) RequiredWindowSize(reqW, reqH int) (int, int) {
 // getPresetSize calculates the optimal dimensions for a requested preset mode.
 // It uses predefined base sizes but ensures they fit within the current monitor constraints.
 func (b *DevBrowser) GetPresetSize(mode string) (int, int, error) {
-	var baseW, baseH int
-
-	// Base definitions
-	switch mode {
-	case "desktop":
-		baseW, baseH = 1440, 900
-	case "mobile":
-		baseW, baseH = 375, 812
-	case "tablet":
-		baseW, baseH = 768, 1024
-	default:
-		return 0, 0, fmt.Errorf("unknown mode: %s", mode)
-	}
-
 	b.Mu.Lock()
 	monW := b.MonitorWidth
 	monH := b.MonitorHeight
@@ -174,6 +124,23 @@ func (b *DevBrowser) GetPresetSize(mode string) (int, int, error) {
 		monW = b.MonitorWidth
 		monH = b.MonitorHeight
 		b.Mu.Unlock()
+	}
+
+	var baseW, baseH int
+
+	// Base definitions
+	switch mode {
+	case "desktop":
+		if monW > 0 && monH > 0 {
+			return monW, monH, nil
+		}
+		baseW, baseH = 1024, 768
+	case "mobile":
+		baseW, baseH = 375, 812
+	case "tablet":
+		baseW, baseH = 768, 1024
+	default:
+		return 0, 0, fmt.Errorf("unknown mode: %s", mode)
 	}
 
 	// If still not detected, return base size

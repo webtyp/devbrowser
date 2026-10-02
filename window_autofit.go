@@ -51,10 +51,6 @@ func (b *DevBrowser) GrowWindowToFit(reqW, reqH int) (bool, error) {
 	b.Mu.Lock()
 	b.Width = newW
 	b.Height = newH
-	b.SizeConfigured = true
-	if b.DB != nil {
-		b.DB.Set(StoreKeyBrowserSize, fmt.Sprintf("%d,%d", newW, newH))
-	}
 	b.Mu.Unlock()
 
 	return true, nil

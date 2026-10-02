@@ -104,13 +104,12 @@ func TestDeviceEmulation_ValidationAndDistinctModes(t *testing.T) {
 		t.Fatal(err)
 	}
 	resultText := contents[0].Text
-	if !strings.Contains(resultText, "Device emulation set to desktop") || !strings.Contains(resultText, "viewport 1440x900") {
-		t.Errorf("Desktop response should specify viewport 1440x900. Got: %s", resultText)
+	if !strings.Contains(resultText, "Device emulation set to desktop") || !strings.Contains(resultText, "viewport ") {
+		t.Errorf("Desktop response should specify viewport. Got: %s", resultText)
 	}
-	// desktop PINS the override, so the stored mode is the deterministic half of
-	// "the two branches are distinct" — see the off case below.
+	// desktop sets stored mode to desktop
 	if db.ViewportMode != "desktop" {
-		t.Errorf("desktop must pin the override; ViewportMode = %q, want \"desktop\"", db.ViewportMode)
+		t.Errorf("desktop must set ViewportMode; ViewportMode = %q, want \"desktop\"", db.ViewportMode)
 	}
 
 	// 3. Setting "off" clears overrides and returns actual window layout
@@ -167,7 +166,7 @@ func TestEmulationViewportSize_Modes(t *testing.T) {
 	}{
 		{"mobile", 430, 739, false},
 		{"tablet", 1024, 1366, false},
-		{"desktop", 1440, 900, false},
+		{"desktop", 0, 0, false},
 		{"off", 0, 0, false},
 		{"", 0, 0, false},
 		{"unknown_mode", 0, 0, true},

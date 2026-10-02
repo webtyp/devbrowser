@@ -145,8 +145,10 @@ func TestLogicPreservation_NoConfigStartup(t *testing.T) {
 		b.StartWithDetectedSize()
 	}
 
-	// In this case (1920x1080), the default 1024x768 fits, so it shouldn't change.
-	// Let's force a scenario where default DOESN'T fit (e.g. tiny screen) to prove detection worked.
+	// When no config exists, window adopts the monitor size
+	if b.Width != mockMonitorW || b.Height != mockMonitorH {
+		t.Errorf("Startup Auto-Size Failed: got %dx%d, want %dx%d", b.Width, b.Height, mockMonitorW, mockMonitorH)
+	}
 }
 
 func TestLogicPreservation_TinyScreenStartup(t *testing.T) {
