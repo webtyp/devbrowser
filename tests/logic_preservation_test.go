@@ -1,9 +1,9 @@
 package devbrowser_test
 
 import (
-	"webtyp.com/devbrowser"
 	"fmt"
 	"testing"
+	"webtyp.com/devbrowser"
 )
 
 // TestLogicPreservation_ConfigPriority enforces the critical business logic:
