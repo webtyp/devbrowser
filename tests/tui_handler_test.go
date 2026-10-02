@@ -31,14 +31,14 @@ func TestTUI_HandlerExecution(t *testing.T) {
 	}
 
 	// 2. Initial Label when closed
-	if b.Label() != "Show Browser" {
-		t.Errorf("expected Label 'Show Browser' when closed, got %q", b.Label())
+	if b.Label() != "Open Browser" {
+		t.Errorf("expected Label 'Open Browser' when closed, got %q", b.Label())
 	}
 
 	// 3. Label when open
 	b.IsOpenFlag = true
-	if b.Label() != "Hide Browser" {
-		t.Errorf("expected Label 'Hide Browser' when open, got %q", b.Label())
+	if b.Label() != "Close Browser" {
+		t.Errorf("expected Label 'Close Browser' when open, got %q", b.Label())
 	}
 
 	// 4. StatusMessage

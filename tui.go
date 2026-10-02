@@ -12,9 +12,9 @@ func (h *DevBrowser) Name() string {
 
 func (h *DevBrowser) Label() string {
 	if h.IsOpenFlag {
-		return "Hide Browser"
+		return "Close Browser"
 	}
-	return "Show Browser"
+	return "Open Browser"
 }
 
 // StatusMessage returns formatted browser status for logging
