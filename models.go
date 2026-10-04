@@ -191,6 +191,11 @@ var SaveScreenshotArgsModel = model.Definition{
 	},
 }
 
+var GetSelectedElementArgsModel = model.Definition{
+	Name: "get_selected_element_args",
+	Fields: model.Fields{},
+}
+
 type InterceptedRequest struct {
 	URL          string
 	Method       string

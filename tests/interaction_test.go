@@ -1,8 +1,6 @@
 package devbrowser_test
 
 import (
-	"webtyp.com/devbrowser"
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -31,24 +29,16 @@ func TestBrowserInteraction(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	// 2. Setup Chromedp
-	opts := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.Flag("headless", true),
-		chromedp.DisableGPU,
-		chromedp.ExecPath(devbrowser.ResolveChromeExecPath()),
-	)
-	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
-	defer cancel()
-
-	ctx, cancel := chromedp.NewContext(allocCtx)
-	defer cancel()
+	// 2. Setup browser context
+	db, _ := NewTestBrowserWithContext(t)
+	defer db.CloseBrowser()
 
 	// 3. Test Fill (Typing)
 	var inputValue string
 	fillSelector := "#test-input"
 	fillValue := "Hello World"
 
-	err := chromedp.Run(ctx,
+	err := chromedp.Run(db.Ctx,
 		chromedp.Navigate(ts.URL),
 		chromedp.WaitVisible(fillSelector, chromedp.ByQuery),
 		chromedp.SendKeys(fillSelector, fillValue, chromedp.ByQuery),
@@ -66,7 +56,7 @@ func TestBrowserInteraction(t *testing.T) {
 	var resultText string
 	clickSelector := "#test-btn"
 
-	err = chromedp.Run(ctx,
+	err = chromedp.Run(db.Ctx,
 		chromedp.Click(clickSelector, chromedp.ByQuery),
 		chromedp.Sleep(100*time.Millisecond), // Wait for JS execution
 		chromedp.Text("#result", &resultText, chromedp.ByQuery),

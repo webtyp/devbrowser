@@ -35,9 +35,9 @@ func (h *DevBrowser) buildAllocatorOptions() []chromedp.ExecAllocatorOption {
 		chromedp.WindowSize(h.Width, h.Height),
 	)
 
-	// Conditionally add devtools flag
-	h.DevToolsReserved = h.Width > 1200
-	if h.DevToolsReserved {
+	// Always enable DevTools for non-headless sessions
+	h.DevToolsReserved = true
+	if !h.Headless {
 		opts = append(opts, chromedp.Flag("auto-open-devtools-for-tabs", true))
 	}
 
@@ -66,6 +66,15 @@ func (h *DevBrowser) buildAllocatorOptions() []chromedp.ExecAllocatorOption {
 }
 
 func (h *DevBrowser) CreateBrowserContext() error {
+	if h.Cancel != nil {
+		h.Cancel()
+		h.Cancel = nil
+	}
+	if h.AllocCancel != nil {
+		h.AllocCancel()
+		h.AllocCancel = nil
+	}
+
 	opts := h.buildAllocatorOptions()
 
 	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)

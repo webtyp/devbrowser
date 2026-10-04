@@ -20,6 +20,7 @@ func TestGetMCPToolsMetadata_AllToolsRegistered(t *testing.T) {
 		"browser_navigate",
 		"browser_swipe_element",
 		"browser_inspect_element",
+		"browser_get_selected_element",
 		"browser_get_performance",
 		"browser_get_network_logs",
 		"browser_evaluate_js",

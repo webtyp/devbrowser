@@ -4,16 +4,14 @@ func (h *DevBrowser) CloseBrowser() error {
 	h.Mu.Lock()
 	defer h.Mu.Unlock()
 
-	if !h.IsOpenFlag {
-		return nil
-	}
-
+	wasOpen := h.IsOpenFlag
 	h.IsOpenFlag = false
 	h.ready = false
 	h.pendingReload = false
 
 	if h.Cancel != nil {
 		h.Cancel()
+		h.Cancel = nil
 	}
 
 	// Cancel the exec allocator too, otherwise the Chrome OS process/window
@@ -21,14 +19,15 @@ func (h *DevBrowser) CloseBrowser() error {
 	// window -> the about:blank "double window" bug.
 	if h.AllocCancel != nil {
 		h.AllocCancel()
+		h.AllocCancel = nil
 	}
 
 	// Limpiar recursos
 	h.Ctx = nil
-	h.Cancel = nil
-	h.AllocCancel = nil
 
-	h.Logger(h.StatusMessage())
-	h.UI.RefreshUI()
+	if wasOpen {
+		h.Logger(h.StatusMessage())
+		h.UI.RefreshUI()
+	}
 	return nil
 }

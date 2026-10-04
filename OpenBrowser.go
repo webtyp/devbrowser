@@ -7,34 +7,34 @@ import (
 	"webtyp.com/devbrowser/chromedp"
 )
 
-func (h *DevBrowser) OpenBrowser(port string, https bool) {
+// Open idempotently opens the browser at rawURL.
+// If the browser is already open and responsive, it navigates to rawURL without spawning a new window.
+func (h *DevBrowser) Open(rawURL string) error {
 	h.Mu.Lock()
 	isFirst := h.FirstCall
 	h.FirstCall = false
-	h.LastPort = port
-	h.LastHttps = https
+	h.LastURL = rawURL
 
-	//h.Logger(fmt.Sprintf("DEBUG: OpenBrowser called. port=%s, https=%v, isOpen=%v, firstCall=%v", port, https, h.IsOpenFlag, isFirst))
+	// If already open and alive, just navigate to the requested URL (idempotent)
+	if h.IsOpenFlag && h.Ctx != nil && h.Ctx.Err() == nil {
+		h.Mu.Unlock()
+		return h.NavigateToURL(rawURL)
+	}
 
 	// Logic: on first call, only open if autoStart is true.
 	// On subsequent calls (e.g. user action), always open.
 	if isFirst && !h.AutoStart {
-		//h.Logger("DEBUG: OpenBrowser skipped on first call (autoStart=false)")
 		h.Mu.Unlock()
-		return
-	}
-
-	if h.IsOpenFlag {
-		h.Mu.Unlock()
-		return
+		return nil
 	}
 
 	if h.TestMode {
 		h.OpenedOnce = true
 		h.Mu.Unlock()
 		h.Logger("Skipping browser open in TestMode")
-		return
+		return nil
 	}
+
 	h.IsOpenFlag = true
 	h.OpenedOnce = true
 	h.Mu.Unlock()
@@ -59,12 +59,6 @@ func (h *DevBrowser) OpenBrowser(port string, https bool) {
 			return
 		}
 
-		protocol := "http"
-		if https {
-			protocol = "https"
-		}
-		url := protocol + `://localhost:` + port + "/"
-
 		// Initialize console log capturing BEFORE navigating to the page
 		// This ensures all console.log statements from page load are captured
 		if err := h.initializeConsoleCapture(); err != nil {
@@ -74,16 +68,18 @@ func (h *DevBrowser) OpenBrowser(port string, https bool) {
 		h.initializeNetworkCapture()
 		h.initializeErrorCapture()
 		h.initializeInterceptCapture()
+		h.initializeInspectCapture()
 
 		if err := chromedp.Run(h.Ctx,
-			chromedp.Navigate(url),
+			chromedp.Navigate(rawURL),
 			chromedp.WaitReady("body"),
+			chromedp.Evaluate(injectInspectListenerJS, nil),
 		); err != nil {
-			h.ErrChan <- fmt.Errorf("error navigating to %s: %v", url, err)
+			h.ErrChan <- fmt.Errorf("error navigating to %s: %v", rawURL, err)
 			return
 		}
 
-		// Esperar un momento adicional para asegurar que todo esté cargado
+		// Wait an extra moment to ensure rendering completes
 		time.Sleep(100 * time.Millisecond)
 
 		// Restore device emulation if set
@@ -112,13 +108,12 @@ func (h *DevBrowser) OpenBrowser(port string, https bool) {
 		go h.monitorBrowserClose()
 	}()
 
-	// Esperar señal de inicio o error
+	// Wait for start signal or error
 	select {
 	case err := <-h.ErrChan:
-		// use helper to ensure logging goes through configured logger
 		h.Logger("Error opening DevBrowser: ", err)
 		h.CloseBrowser()
-		return
+		return err
 	case <-h.ReadyChan:
 		h.Logger(h.StatusMessage())
 
@@ -126,6 +121,25 @@ func (h *DevBrowser) OpenBrowser(port string, https bool) {
 		go h.monitorBrowserGeometry()
 
 		h.UI.RefreshUI()
+		return nil
+	}
+}
+
+// OpenBrowser opens the browser on the given port and scheme.
+// It formats the URL and delegates to Open, preserving backward compatibility.
+func (h *DevBrowser) OpenBrowser(port string, https bool) {
+	if port == "" {
 		return
 	}
+	h.Mu.Lock()
+	h.LastPort = port
+	h.LastHttps = https
+	h.Mu.Unlock()
+
+	protocol := "http"
+	if https {
+		protocol = "https"
+	}
+	url := protocol + "://localhost:" + port + "/"
+	_ = h.Open(url)
 }

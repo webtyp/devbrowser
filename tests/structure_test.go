@@ -1,8 +1,6 @@
 package devbrowser_test
 
 import (
-	"webtyp.com/devbrowser"
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"webtyp.com/devbrowser"
 	"webtyp.com/devbrowser/chromedp"
 )
 
@@ -47,21 +46,13 @@ func TestPageStructureExtraction(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	// 2. Setup standard Chromedp context (using existing devbrowser helpers if available, or raw)
-	opts := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.Flag("headless", true),
-		chromedp.DisableGPU,
-		chromedp.ExecPath(devbrowser.ResolveChromeExecPath()),
-	)
-	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
-	defer cancel()
-
-	ctx, cancel := chromedp.NewContext(allocCtx)
-	defer cancel()
+	// 2. Setup browser context using standard test helper
+	db, _ := NewTestBrowserWithContext(t)
+	defer db.CloseBrowser()
 
 	// 3. Navigate and Extract
 	var structure string
-	err := chromedp.Run(ctx,
+	err := chromedp.Run(db.Ctx,
 		chromedp.Navigate(ts.URL),
 		chromedp.Sleep(500*time.Millisecond), // Wait for render
 		chromedp.Evaluate(devbrowser.GetStructureJS, &structure),

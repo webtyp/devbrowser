@@ -1,13 +1,12 @@
 package devbrowser_test
 
 import (
-	"webtyp.com/devbrowser"
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"webtyp.com/devbrowser"
 	"webtyp.com/devbrowser/chromedp"
 	"webtyp.com/mcp"
 )
@@ -69,30 +68,14 @@ func TestBrowserSwipe(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	// 2. Setup Chromedp
-	opts := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.Flag("headless", true),
-		chromedp.DisableGPU,
-		chromedp.ExecPath(devbrowser.ResolveChromeExecPath()),
-	)
-	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
-	defer cancel()
-
-	ctx, cancel := chromedp.NewContext(allocCtx)
-	defer cancel()
-
-	// 3. Create a devbrowser instance
-	db := &devbrowser.DevBrowser{
-		Ctx:    ctx,
-		Cancel: cancel,
-		IsOpenFlag: true,
-		Log:    func(args ...any) {},
-	}
+	// 2. Setup devbrowser with live browser context
+	db, _ := NewTestBrowserWithContext(t)
+	defer db.CloseBrowser()
 	db.Width = 1024
 	db.Height = 768
 
 	// Navigate
-	if err := chromedp.Run(ctx, chromedp.Navigate(ts.URL)); err != nil {
+	if err := chromedp.Run(db.Ctx, chromedp.Navigate(ts.URL)); err != nil {
 		t.Fatalf("Failed to navigate: %v", err)
 	}
 
@@ -126,7 +109,7 @@ func TestBrowserSwipe(t *testing.T) {
 
 	// 6. Verify handle moved
 	var leftValue string
-	err = chromedp.Run(ctx,
+	err = chromedp.Run(db.Ctx,
 		chromedp.Evaluate(`document.getElementById('handle').style.left`, &leftValue),
 	)
 	if err != nil {

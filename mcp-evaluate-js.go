@@ -15,7 +15,7 @@ func (b *DevBrowser) GetEvaluateJsTools() []mcp.Tool {
 		{
 			Name:        "browser_evaluate_js",
 			Description: "Execute JavaScript code in browser context to inspect DOM, call WASM exports, test functions, or debug application state. Returns execution result or error.",
-			Args: new(EvaluateJSArgs),
+			Args:        new(EvaluateJSArgs),
 			Resource:    "browser",
 			Action:      'u',
 			Execute: func(ctx *context.Context, req mcp.Request) (*mcp.Result, error) {
@@ -31,7 +31,7 @@ func (b *DevBrowser) GetEvaluateJsTools() []mcp.Tool {
 				var res interface{}
 				err := chromedp.Run(b.Ctx,
 					chromedp.Evaluate(args.Script, &res, func(p *runtime.EvaluateParams) *runtime.EvaluateParams {
-						return p.WithAwaitPromise(args.AwaitPromise)
+						return p.WithAwaitPromise(args.AwaitPromise).WithIncludeCommandLineAPI(true)
 					}),
 				)
 

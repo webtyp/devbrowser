@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"webtyp.com/devbrowser/cdproto/cdp"
 	"webtyp.com/devbrowser/chromedp"
 	"webtyp.com/fmt/lang"
 )
@@ -53,6 +54,10 @@ type DevBrowser struct {
 
 	LastPort  string
 	LastHttps bool
+	LastURL   string
+
+	LastInspectedBackendNodeID cdp.BackendNodeID
+	SourceLocator              SourceLocator
 
 	IsOpenFlag bool // Indica si el navegador está abierto
 
@@ -207,23 +212,14 @@ func (h *DevBrowser) BrowserStartUrlChanged(fieldName string, oldValue, newValue
 }
 
 func (h *DevBrowser) RestartBrowser() error {
-
 	this := errors.New("RestartBrowser")
 
 	h.Mu.Lock()
 	port, https := h.LastPort, h.LastHttps
+	lastURL := h.LastURL
 	h.Mu.Unlock()
 
-	// Nothing has ever been opened, so there is no window to restart and no
-	// URL to go back to: opening on an empty port navigates to
-	// "http://localhost:/" and fails. Whoever knows the port — the dev server,
-	// through its OpenBrowser callback — opens the first window.
-	//
-	// Until v0.5.9 this was masked by CloseBrowser returning an error on an
-	// already-closed browser, which made this function bail out one line down.
-	// Making that call idempotent removed the accidental guard, so it is
-	// stated here on purpose.
-	if port == "" {
+	if lastURL == "" && port == "" {
 		return nil
 	}
 
@@ -231,8 +227,10 @@ func (h *DevBrowser) RestartBrowser() error {
 		return errors.Join(this, err)
 	}
 
+	if lastURL != "" {
+		return h.Open(lastURL)
+	}
 	h.OpenBrowser(port, https)
-
 	return nil
 }
 
@@ -306,6 +304,12 @@ func (b *DevBrowser) SetHeadless(headless bool) {
 
 func (b *DevBrowser) SetTestMode(testMode bool) {
 	b.TestMode = testMode
+}
+
+func (b *DevBrowser) SetSourceLocator(l SourceLocator) {
+	b.Mu.Lock()
+	b.SourceLocator = l
+	b.Mu.Unlock()
 }
 
 // monitorBrowserClose monitors the browser context and updates state when browser is closed manually

@@ -783,3 +783,33 @@ func (m *SaveScreenshotArgs) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
 
+type GetSelectedElementArgs struct {
+}
+
+func (m *GetSelectedElementArgs) ModelName() string { return "get_selected_element_args" }
+
+func (m *GetSelectedElementArgs) Schema() []model.Field { return GetSelectedElementArgsModel.Fields }
+
+func (m *GetSelectedElementArgs) Pointers() []any { return []any{} }
+
+func (m *GetSelectedElementArgs) IsNil() bool { return m == nil }
+
+func (m *GetSelectedElementArgs) EncodeFields(w model.FieldWriter) {
+}
+
+func (m *GetSelectedElementArgs) DecodeFields(r model.FieldReader) {
+}
+
+type GetSelectedElementArgsList []*GetSelectedElementArgs
+
+func (s *GetSelectedElementArgsList) Len() int             { return len(*s) }
+func (s *GetSelectedElementArgsList) At(i int) model.Fielder { return (*s)[i] }
+func (s *GetSelectedElementArgsList) Append() model.Fielder  { v := &GetSelectedElementArgs{}; *s = append(*s, v); return v }
+func (s *GetSelectedElementArgsList) IsNil() bool          { return s == nil }
+func (s *GetSelectedElementArgsList) EncodeFields(_ model.FieldWriter) {}
+func (s *GetSelectedElementArgsList) DecodeFields(_ model.FieldReader) {}
+
+func (m *GetSelectedElementArgs) Validate(action byte) error {
+	return model.ValidateFields(action, m)
+}
+

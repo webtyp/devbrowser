@@ -1,11 +1,13 @@
 package devbrowser_test
 
 import (
+	"errors"
+	"sync"
+	"testing"
+
 	"webtyp.com/devbrowser"
 	"webtyp.com/json"
 	"webtyp.com/model"
-	"errors"
-	"sync"
 )
 
 // encodeArgs serializes an args struct to its wire JSON so tests can build
@@ -71,13 +73,14 @@ func (s *defaultStore) Set(key, value string) error {
 	return nil
 }
 
-// DefaultTestBrowser creates a devbrowser.DevBrowser instance for tests.
+// NewTestBrowser creates an isolated devbrowser.DevBrowser instance for tests,
+// pre-configured with headless mode enabled, mock UI, in-memory store, and default logger.
 //
 // Accepted variadic options (in any order):
 // - func(...any) : a logger function. If omitted a no-op logger is used.
-// - chan bool     : a custom exit channel. If omitted a new channel is created.
+// - chan bool    : a custom exit channel. If omitted a new channel is created.
 // Any other option types are ignored.
-func DefaultTestBrowser(opts ...any) (*devbrowser.DevBrowser, chan bool) {
+func NewTestBrowser(opts ...any) (*devbrowser.DevBrowser, chan bool) {
 	var logger func(message ...any)
 	var exit chan bool
 
@@ -99,6 +102,23 @@ func DefaultTestBrowser(opts ...any) (*devbrowser.DevBrowser, chan bool) {
 
 	db := devbrowser.New(defaultUI{}, &defaultStore{m: make(map[string]string)}, exit)
 	db.SetLog(logger)
-	db.SetHeadless(true) // Los tests usan modo headless por defecto
+	db.SetHeadless(true) // Test browsers run headless by default for CI/CD safety
 	return db, exit
+}
+
+// NewTestBrowserWithContext creates a devbrowser.DevBrowser, initializes its
+// headless browser context, and sets IsOpenFlag so tests can directly run actions on db.Ctx.
+func NewTestBrowserWithContext(t testing.TB, opts ...any) (*devbrowser.DevBrowser, chan bool) {
+	t.Helper()
+	db, exit := NewTestBrowser(opts...)
+	if err := db.CreateBrowserContext(); err != nil {
+		t.Fatalf("failed to create test browser context: %v", err)
+	}
+	db.IsOpenFlag = true
+	return db, exit
+}
+
+// DefaultTestBrowser is an alias for NewTestBrowser for backwards compatibility.
+func DefaultTestBrowser(opts ...any) (*devbrowser.DevBrowser, chan bool) {
+	return NewTestBrowser(opts...)
 }
