@@ -2,8 +2,9 @@
 PLAN: "feat: WithProfile — one persistent Chrome profile per project, so OPFS (the agent's models) survives between dev sessions"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 2104377294915146041
+PR: https://github.com/webtyp/devbrowser/pull/15
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
@@ -94,3 +95,10 @@ delete the directory).
 | 2 | `context.go` | flag, lock fallback |
 | 3 | tests | table green |
 | 4 | `README.md` | documented |
+
+## Executor notes
+I have successfully implemented all stages of the plan:
+1. Created `profile_dir.go` with `WithProfile` and updated `DevBrowser` struct.
+2. Updated `context.go` to use `h.ProfileDir` and safely fallback when locked. Added `profileLocked` logic. Fixed a logging order issue reported in code review.
+3. Created `tests/profile_dir_test.go` and implemented all required tests. Adjusted some logic in the tests around `time.Now` mocking to properly test `ProfileCleaner` without triggering grace defensive defaults.
+4. Updated `README.md` to document the new `WithProfile` option and the persistent profile behavior.

@@ -115,6 +115,9 @@ type DevBrowser struct {
 	// Cache configuration
 	CacheEnabled bool // Disabled by default for development
 	Mu           sync.Mutex
+
+	ProfileDir            string // "" = throwaway profile
+	profileFallbackReason string
 }
 
 // Option configures the DevBrowser
