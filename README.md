@@ -29,9 +29,24 @@ func main() {
 }
 ```
 
+## Persistent profile
+
+By default, every session launches Chrome with a throwaway profile. This means that storage like OPFS, IndexedDB, and cookies are lost and reset on each restart, causing initial setup tasks (like copying large AI models to OPFS) to run repeatedly.
+
+You can configure the browser to use a single persistent profile per project by passing `devbrowser.WithProfile(projectRoot)` when constructing the browser:
+
+```go
+browser := devbrowser.New(ui, store, exit, devbrowser.WithProfile(projectRoot))
+```
+
+This ensures the copy happens exactly once per model version, speeding up subsequent developer sessions. The persistent profile lives under your system's user cache directory (`<os.UserCacheDir()>/webtyp/devbrowser/profiles/<hash>`).
+
+**Resetting:** If you need to clear all state manually, you can simply delete the specific profile directory.
+
 ## Public API
 
-- `New(sc serverConfig, ui userInterface, exitChan chan bool) *DevBrowser`: Create a new DevBrowser instance.
+- `New(sc serverConfig, ui userInterface, exitChan chan bool, opts ...Option) *DevBrowser`: Create a new DevBrowser instance.
+- `WithProfile(root string) Option`: Option to use a persistent Chrome profile, storing OPFS and IndexedDB across sessions for the specific project root.
 - `(*DevBrowser) OpenBrowser() error`: Launch a new browser window.
 - `(*DevBrowser) CloseBrowser() error`: Close the browser and clean up resources. Safe to call unconditionally (idempotent, returns `nil` if already closed).
 - `(*DevBrowser) Reload() error`: Reload the current page in the browser.

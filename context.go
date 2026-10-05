@@ -2,9 +2,13 @@ package devbrowser
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 
 	"webtyp.com/devbrowser/chromedp"
+	"webtyp.com/fmt/lang"
 )
 
 // FlagSPKIList trusts the listed SubjectPublicKeyInfo hashes and nothing else.
@@ -58,11 +62,37 @@ func (h *DevBrowser) buildAllocatorOptions() []chromedp.ExecAllocatorOption {
 		)
 	}
 
+	if h.ProfileDir != "" {
+		if profileLocked(h.ProfileDir) {
+			h.profileFallbackReason = "locked by another process"
+		} else {
+			opts = append(opts, chromedp.UserDataDir(h.ProfileDir))
+		}
+	}
+
 	// Resolve the Chrome executable path
 	chromePath := ResolveChromeExecPath()
 	opts = append(opts, chromedp.ExecPath(chromePath))
 
 	return opts
+}
+
+func profileLocked(dir string) bool {
+	lockPath := filepath.Join(dir, singletonLockName)
+	target, err := os.Readlink(lockPath)
+	if err != nil {
+		return false
+	}
+
+	idx := strings.LastIndex(target, "-")
+	if idx != -1 && idx < len(target)-1 {
+		pidStr := target[idx+1:]
+		pid, parseErr := strconv.Atoi(pidStr)
+		if parseErr == nil {
+			return processAlive(pid)
+		}
+	}
+	return true // Cannot tell -> treat as locked
 }
 
 func (h *DevBrowser) CreateBrowserContext() error {
@@ -76,6 +106,12 @@ func (h *DevBrowser) CreateBrowserContext() error {
 	}
 
 	opts := h.buildAllocatorOptions()
+
+	if h.profileFallbackReason != "" {
+		h.Logger(lang.Translate("browser", "profile", "unavailable,", "using", "a", "temporary", "one:", h.profileFallbackReason).String())
+		// Clear it so we only log it once per session failure
+		h.profileFallbackReason = ""
+	}
 
 	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
 	ctx, cancel := chromedp.NewContext(allocCtx,
