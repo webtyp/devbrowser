@@ -100,25 +100,14 @@ func (c *ProfileCleaner) CleanStale() (removed int, freed int64, err error) {
 		dirPath := filepath.Join(root, entry.Name())
 		lockPath := filepath.Join(dirPath, singletonLockName)
 
-		target, linkErr := os.Readlink(lockPath)
+		pid, hasLock, readable := lockOwner(lockPath)
 		stale := false
 
-		if linkErr == nil {
-			// Target is "<hostname>-<pid>"
-			idx := strings.LastIndex(target, "-")
-			if idx != -1 && idx < len(target)-1 {
-				pidStr := target[idx+1:]
-				pid, parseErr := strconv.Atoi(pidStr)
-				if parseErr == nil {
-					stale = !isAlive(pid)
-				} else {
-					// Cannot tell -> treat directory as in use, skip it
-					continue
-				}
-			} else {
-				// Cannot tell -> skip
-				continue
+		if hasLock {
+			if !readable {
+				continue // cannot tell -> treat the directory as in use
 			}
+			stale = !isAlive(pid)
 		} else {
 			// Readlink failed (no lock or error). Check modtime against Grace.
 			info, statErr := entry.Info()
@@ -140,4 +129,22 @@ func (c *ProfileCleaner) CleanStale() (removed int, freed int64, err error) {
 	}
 
 	return removed, freed, nil
+}
+
+// lockOwner reads a Chrome SingletonLock symlink, whose target is "<hostname>-<pid>". hasLock is
+// false when there is no lock; readable is false when its target cannot be parsed.
+func lockOwner(lockPath string) (pid int, hasLock, readable bool) {
+	target, err := os.Readlink(lockPath)
+	if err != nil {
+		return 0, false, false
+	}
+	idx := strings.LastIndex(target, "-")
+	if idx == -1 || idx == len(target)-1 {
+		return 0, true, false
+	}
+	pid, err = strconv.Atoi(target[idx+1:])
+	if err != nil {
+		return 0, true, false
+	}
+	return pid, true, true
 }

@@ -2,9 +2,7 @@ package devbrowser
 
 import (
 	"context"
-	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"webtyp.com/devbrowser/chromedp"
@@ -77,22 +75,14 @@ func (h *DevBrowser) buildAllocatorOptions() []chromedp.ExecAllocatorOption {
 	return opts
 }
 
+// profileLocked reports whether a running Chrome holds the profile at dir. A lock whose owner
+// cannot be read counts as held.
 func profileLocked(dir string) bool {
-	lockPath := filepath.Join(dir, singletonLockName)
-	target, err := os.Readlink(lockPath)
-	if err != nil {
+	pid, hasLock, readable := lockOwner(filepath.Join(dir, singletonLockName))
+	if !hasLock {
 		return false
 	}
-
-	idx := strings.LastIndex(target, "-")
-	if idx != -1 && idx < len(target)-1 {
-		pidStr := target[idx+1:]
-		pid, parseErr := strconv.Atoi(pidStr)
-		if parseErr == nil {
-			return processAlive(pid)
-		}
-	}
-	return true // Cannot tell -> treat as locked
+	return !readable || processAlive(pid)
 }
 
 func (h *DevBrowser) CreateBrowserContext() error {
