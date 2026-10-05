@@ -2,8 +2,9 @@
 PLAN: "feat: WithProfile — one persistent Chrome profile per project, so OPFS (the agent's models) survives between dev sessions"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 2104377294915146041
+PR: https://github.com/webtyp/devbrowser/pull/15
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
