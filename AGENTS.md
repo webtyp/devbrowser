@@ -27,5 +27,8 @@ allocator flags without launching anything).
 ## Rules
 
 - Do not edit `chromedp/`, `cdproto/` (vendored).
+- Tests live in `tests/` (`package devbrowser_test`, public API only). A root-level test is allowed
+  only with a top-of-file justification of the unexported identifier it needs. **Never export a
+  symbol so a test can reach it.**
 - Every repeated string (flag names, directory names) is a named constant.
 - Messages to the developer go through `b.Logger` with `webtyp.com/fmt/lang` like the rest of the code.
