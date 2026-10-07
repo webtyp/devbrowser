@@ -68,12 +68,11 @@ func (h *DevBrowser) Open(rawURL string) error {
 		h.initializeNetworkCapture()
 		h.initializeErrorCapture()
 		h.initializeInterceptCapture()
-		h.initializeInspectCapture()
+		h.installSelectionCapture()
 
 		if err := chromedp.Run(h.Ctx,
 			chromedp.Navigate(rawURL),
 			chromedp.WaitReady("body"),
-			chromedp.Evaluate(injectInspectListenerJS, nil),
 		); err != nil {
 			h.ErrChan <- fmt.Errorf("error navigating to %s: %v", rawURL, err)
 			return

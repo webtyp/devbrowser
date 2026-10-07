@@ -155,6 +155,7 @@ The following Model Context Protocol (MCP) tools are available for browser autom
 | `browser_navigate` | Navigate to a specific URL or relative path |
 | `browser_swipe_element` | Perform a swipe gesture on an element |
 | `browser_inspect_element` | Get detailed information about a DOM element |
+| `browser_get_selected_element` | Get the elements the developer selected (Alt+click on the page, DevTools inspect pointer or Elements panel), newest first, with source locations and a screenshot |
 | `browser_get_performance` | Get page performance metrics |
 | `browser_get_network_logs` | Get network requests and responses metadata |
 | `browser_evaluate_js` | Execute JavaScript in the browser context |
@@ -224,6 +225,24 @@ To detect these and other common mobile layout defects, use **`browser_audit_mob
 - **`input-zoom`**: Input/Select fields with font-size `< 16px` (which triggers iOS Safari's annoying layout-shifting zoom on focus).
 - **`tap-target`**: Interactive elements smaller than the standard `44x44` px touch target.
 - **`fixed-vh`**: Fixed position elements using `vh` heights (the worst layout shifter on scroll).
+
+### Selecting elements for the agent
+
+Alt+click any element in the page to hand it to the agent: the click is kept away from the app
+(its own handlers do not fire) and the element gets a numbered blue badge. The DevTools inspect
+pointer and the DevTools Elements panel work too.
+
+`browser_get_selected_element` keeps the **last 10 selections** as snapshots taken at selection
+time (report, source code locations, cropped screenshot), so a later re-render does not change them.
+
+| Argument | Meaning |
+|---|---|
+| `count` | 1–10, default 1: return the N most recent selections, newest first |
+| `clear` | `true` empties the history and removes the badges |
+
+Badge numbers never repeat within a browser session, and the history survives page reloads.
+On desktops where Alt+drag moves windows (XFCE, KDE before Plasma 6) the click never reaches the
+page; use the DevTools inspect pointer there.
 
 ### Saving screenshots directly to disk
 

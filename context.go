@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"webtyp.com/devbrowser/chromedp"
-	"webtyp.com/fmt/lang"
+	"webtyp.com/lang"
 )
 
 // FlagSPKIList trusts the listed SubjectPublicKeyInfo hashes and nothing else.

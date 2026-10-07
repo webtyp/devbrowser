@@ -8,6 +8,11 @@ func (h *DevBrowser) CloseBrowser() error {
 	h.IsOpenFlag = false
 	h.ready = false
 	h.pendingReload = false
+	// The next browser context needs its listeners again. The selection
+	// history stays: its snapshots are self-contained, and nextSeq keeps
+	// counting so a badge number is never reused.
+	h.selectionCaptureInstalled = false
+	h.lastPanelNodeID = 0
 
 	if h.Cancel != nil {
 		h.Cancel()

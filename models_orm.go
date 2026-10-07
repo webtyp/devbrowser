@@ -784,20 +784,26 @@ func (m *SaveScreenshotArgs) Validate(action byte) error {
 }
 
 type GetSelectedElementArgs struct {
+	Count int64
+	Clear bool
 }
 
 func (m *GetSelectedElementArgs) ModelName() string { return "get_selected_element_args" }
 
 func (m *GetSelectedElementArgs) Schema() []model.Field { return GetSelectedElementArgsModel.Fields }
 
-func (m *GetSelectedElementArgs) Pointers() []any { return []any{} }
+func (m *GetSelectedElementArgs) Pointers() []any { return []any{&m.Count, &m.Clear} }
 
 func (m *GetSelectedElementArgs) IsNil() bool { return m == nil }
 
 func (m *GetSelectedElementArgs) EncodeFields(w model.FieldWriter) {
+	w.Int("count", m.Count)
+	w.Bool("clear", m.Clear)
 }
 
 func (m *GetSelectedElementArgs) DecodeFields(r model.FieldReader) {
+	if v, ok := r.Int("count"); ok { m.Count = v }
+	if v, ok := r.Bool("clear"); ok { m.Clear = v }
 }
 
 type GetSelectedElementArgsList []*GetSelectedElementArgs

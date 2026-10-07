@@ -1,17 +1,10 @@
 package devbrowser
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	wtctx "webtyp.com/context"
-	"webtyp.com/devbrowser/cdproto/cdp"
-	"webtyp.com/devbrowser/cdproto/dom"
-	"webtyp.com/devbrowser/cdproto/page"
-	"webtyp.com/devbrowser/cdproto/runtime"
-	"webtyp.com/devbrowser/cdproto/target"
 	"webtyp.com/devbrowser/chromedp"
 	"webtyp.com/mcp"
 )
@@ -62,83 +55,20 @@ type selectedClip struct {
 	Height float64 `json:"height"`
 }
 
-// GetSelectedElementJS evaluates the element selected by inspect pointer, $0, or developer click.
-var GetSelectedElementJS = fmt.Sprintf(`
-(() => {
-	%s
-	let target = null;
-	if (typeof window.__webtyp_selected !== 'undefined' && window.__webtyp_selected !== null && (window.__webtyp_selected instanceof Element)) {
-		target = window.__webtyp_selected;
-	}
-	if (!target && typeof window.$0 !== 'undefined' && window.$0 !== null && (window.$0 instanceof Element)) {
-		target = window.$0;
-	}
-	try {
-		if (!target && typeof $0 !== 'undefined' && $0 !== null && ($0 instanceof Element)) {
-			target = $0;
-		}
-	} catch (e) {}
-	if (!target && typeof window.__webtyp_last_clicked !== 'undefined' && window.__webtyp_last_clicked !== null && (window.__webtyp_last_clicked instanceof Element)) {
-		target = window.__webtyp_last_clicked;
-	}
-	if (!target && document.activeElement && document.activeElement !== document.body && document.activeElement !== document.documentElement) {
-		target = document.activeElement;
-	}
-
-	if (!target) {
-		return JSON.stringify({ hasSelection: false });
-	}
-	window.__webtyp_target_for_screenshot = target;
-	try {
-		target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-	} catch (e) {}
-	const details = extractElementDetails(target);
-	if (!details) {
-		return JSON.stringify({ hasSelection: false });
-	}
-	return JSON.stringify({ hasSelection: true, ...details });
-})()
-`, ExtractElementDetailsFunctionJS)
-
-const applyHighlightJS = `(() => {
-	const el = window.__webtyp_target_for_screenshot;
-	if (!el || !(el instanceof Element)) return;
-	window.__webtyp_prev_outline = el.style.outline;
-	window.__webtyp_prev_outlineOffset = el.style.outlineOffset;
-	window.__webtyp_prev_boxShadow = el.style.boxShadow;
-	el.style.setProperty('outline', '3px solid #2563eb', 'important');
-	el.style.setProperty('outline-offset', '2px', 'important');
-	el.style.setProperty('box-shadow', '0 0 0 4px rgba(37, 99, 235, 0.35)', 'important');
-})()`
-
-const removeHighlightJS = `(() => {
-	const el = window.__webtyp_target_for_screenshot;
-	if (!el || !(el instanceof Element)) return;
-	if (typeof window.__webtyp_prev_outline === 'string' && window.__webtyp_prev_outline !== '') {
-		el.style.outline = window.__webtyp_prev_outline;
-	} else {
-		el.style.removeProperty('outline');
-	}
-	if (typeof window.__webtyp_prev_outlineOffset === 'string' && window.__webtyp_prev_outlineOffset !== '') {
-		el.style.outlineOffset = window.__webtyp_prev_outlineOffset;
-	} else {
-		el.style.removeProperty('outline-offset');
-	}
-	if (typeof window.__webtyp_prev_boxShadow === 'string' && window.__webtyp_prev_boxShadow !== '') {
-		el.style.boxShadow = window.__webtyp_prev_boxShadow;
-	} else {
-		el.style.removeProperty('box-shadow');
-	}
-	delete window.__webtyp_prev_outline;
-	delete window.__webtyp_prev_outlineOffset;
-	delete window.__webtyp_prev_boxShadow;
-})()`
+// Tool messages of browser_get_selected_element.
+const (
+	msgSelectionCleared  = "Cleared %d selection(s)."
+	msgNoSelection       = "No element selected. Alt+click an element in the page, or use the DevTools inspect pointer, then call this tool again."
+	msgSelectionCountErr = "count must be between 1 and %d"
+	msgSelectionHeader   = "Selection #%d (%s, %s, page %s)"
+	msgSelectionMore     = "History holds %d selection(s); call with count=%d to see them all."
+)
 
 func (b *DevBrowser) GetSelectedElementTools() []mcp.Tool {
 	return []mcp.Tool{
 		{
 			Name:        "browser_get_selected_element",
-			Description: "Get the browser element currently selected by the developer in Chrome DevTools ($0). Returns WebTyp identifiers (tag, id, data-key, classes), hierarchy breadcrumbs, outer HTML, geometry, and a cropped visual screenshot. Returns guidance if no element is selected.",
+			Description: "Get the latest elements the developer selected in the browser — by Alt+click on the page (marked with a numbered badge), the DevTools inspect pointer, or the DevTools Elements panel. Keeps the last 10 as snapshots taken at selection time. Args: count (1-10, default 1) returns the N most recent, newest first; clear=true empties the history and removes the badges. Each selection includes WebTyp identifiers, hierarchy, outer HTML, geometry, source code locations and a cropped screenshot.",
 			Args:        new(GetSelectedElementArgs),
 			Resource:    "browser",
 			Action:      'r',
@@ -149,140 +79,61 @@ func (b *DevBrowser) GetSelectedElementTools() []mcp.Tool {
 				if b.Ctx == nil {
 					return nil, fmt.Errorf("browser context is nil")
 				}
+				b.installSelectionCapture()
+
+				var args GetSelectedElementArgs
+				if err := req.Bind(&args); err != nil {
+					return nil, err
+				}
+
+				if args.Clear {
+					b.Mu.Lock()
+					n := b.selections.clear()
+					b.Mu.Unlock()
+					_ = chromedp.Run(b.Ctx, chromedp.Evaluate(clearSelectionBadgesJS, nil))
+					return mcp.Text(fmt.Sprintf(msgSelectionCleared, n)), nil
+				}
+
+				count := int(args.Count)
+				if count == 0 {
+					count = 1
+				}
+				if count < 1 || count > selectionHistoryCap {
+					return nil, fmt.Errorf(msgSelectionCountErr, selectionHistoryCap)
+				}
+
+				// Compared against the last panel node, not the newest history item,
+				// so an old panel selection is not re-added after a newer alt+click.
+				if id := b.devToolsPanelNodeID(); id != 0 {
+					b.Mu.Lock()
+					isNew := id != b.lastPanelNodeID
+					b.lastPanelNodeID = id
+					b.Mu.Unlock()
+					if isNew && b.enqueueNode(b.Ctx, id) {
+						b.captureSelection(SelectionDevToolsPanel)
+					}
+				}
 
 				b.Mu.Lock()
-				bNodeID := b.LastInspectedBackendNodeID
+				items := b.selections.latest(count)
+				held := b.selections.len()
 				b.Mu.Unlock()
+				if len(items) == 0 {
+					return mcp.Text(msgNoSelection), nil
+				}
 
-				// If no node was captured via inspect pointer, check if DevTools Elements panel has a selected node
-				if bNodeID == 0 {
-					var targets []*target.Info
-					_ = chromedp.Run(b.Ctx, chromedp.ActionFunc(func(c context.Context) error {
-						var err error
-						targets, err = target.GetTargets().Do(c)
-						return err
-					}))
-					for _, tgt := range targets {
-						if strings.Contains(tgt.URL, "devtools") {
-							dtCtx, dtCancel := chromedp.NewContext(b.Ctx, chromedp.WithTargetID(tgt.TargetID))
-							var dtDiag string
-							_ = chromedp.Run(dtCtx,
-								chromedp.Evaluate(`(() => {
-									let bID = 0;
-									const elementsPanel = window.UI?.panels?.elements;
-									let node = null;
-									try {
-										if (elementsPanel) {
-											if (typeof elementsPanel.selectedDOMNode === 'function') {
-												node = elementsPanel.selectedDOMNode();
-											} else if (elementsPanel.treeOutline && typeof elementsPanel.treeOutline.selectedDOMNode === 'function') {
-												node = elementsPanel.treeOutline.selectedDOMNode();
-											}
-										}
-									} catch (e) {}
-
-									if (node && typeof node.backendNodeId === 'function') {
-										bID = node.backendNodeId();
-									}
-
-									return JSON.stringify({
-										bID: bID,
-										panelKeys: elementsPanel ? Object.keys(elementsPanel).filter(k => !k.startsWith('_')).slice(0, 30) : [],
-										nodeFound: !!node,
-										nodeTag: node ? (node.nodeName ? node.nodeName() : node.tagName) : null
-									});
-								})()`, &dtDiag),
-							)
-							if dtC := chromedp.FromContext(dtCtx); dtC != nil && dtC.Target != nil {
-								// Clear TargetID so chromedp cancels the session (DetachFromTarget)
-								// without closing the DevTools tab (CloseTarget).
-								dtC.Target.TargetID = ""
-							}
-							dtCancel()
-							if dtDiag != "" {
-								var parsed struct {
-									BID int64 `json:"bID"`
-								}
-								_ = json.Unmarshal([]byte(dtDiag), &parsed)
-								if parsed.BID != 0 {
-									bNodeID = cdp.BackendNodeID(parsed.BID)
-									break
-								}
-							}
-						}
+				var blocks []mcp.ContentBlock
+				for _, s := range items {
+					header := fmt.Sprintf(msgSelectionHeader, s.seq, s.source, s.at.Format("15:04:05"), s.pageURL)
+					blocks = append(blocks, mcp.TextBlock(header+"\n"+s.report))
+					if s.screenshot != nil {
+						blocks = append(blocks, mcp.ImageBlock(s.screenshot, "image/png"))
 					}
 				}
-
-				if bNodeID != 0 {
-					_ = chromedp.Run(b.Ctx,
-						dom.Enable(),
-						chromedp.ActionFunc(func(c context.Context) error {
-							obj, err := dom.ResolveNode().WithBackendNodeID(bNodeID).Do(c)
-							if err == nil && obj != nil && obj.ObjectID != "" {
-								_, _, _ = runtime.CallFunctionOn("function() { window.__webtyp_selected = this; }").
-									WithObjectID(obj.ObjectID).
-									Do(c)
-							}
-							return nil
-						}),
-					)
+				if held > count {
+					blocks = append(blocks, mcp.TextBlock(fmt.Sprintf(msgSelectionMore, held, held)))
 				}
-
-				var rawJSON string
-				err := chromedp.Run(b.Ctx,
-					chromedp.Evaluate(GetSelectedElementJS, &rawJSON, func(p *runtime.EvaluateParams) *runtime.EvaluateParams {
-						return p.WithIncludeCommandLineAPI(true)
-					}),
-				)
-				if err != nil {
-					return nil, fmt.Errorf("failed to evaluate selected element: %v", err)
-				}
-
-				var data selectedElementData
-				if err := json.Unmarshal([]byte(rawJSON), &data); err != nil {
-					return nil, fmt.Errorf("failed to parse selected element data: %v", err)
-				}
-
-				if !data.HasSelection {
-					return mcp.Text("No element currently selected in DevTools ($0 is null or undefined)."), nil
-				}
-
-				// Build clear text report for the agent
-				report := b.formatSelectedElementReport(&data)
-
-				// Capture cropped screenshot with context and visual highlight if dimensions are visible
-				if data.ViewportClip.Width > 0 && data.ViewportClip.Height > 0 {
-					clip := &page.Viewport{
-						X:      data.ViewportClip.X,
-						Y:      data.ViewportClip.Y,
-						Width:  data.ViewportClip.Width,
-						Height: data.ViewportClip.Height,
-						Scale:  1.0,
-					}
-
-					var imgBytes []byte
-					_ = chromedp.Run(b.Ctx, chromedp.Evaluate(applyHighlightJS, nil))
-					defer func() {
-						_ = chromedp.Run(b.Ctx, chromedp.Evaluate(removeHighlightJS, nil))
-					}()
-
-					err := chromedp.Run(b.Ctx,
-						chromedp.ActionFunc(func(c context.Context) error {
-							buf, err := page.CaptureScreenshot().WithClip(clip).Do(c)
-							if err != nil {
-								return err
-							}
-							imgBytes = buf
-							return nil
-						}),
-					)
-
-					if err == nil && len(imgBytes) > 0 {
-						return mcp.NewResult(mcp.TextBlock(report), mcp.ImageBlock(imgBytes, "image/png")), nil
-					}
-				}
-
-				return mcp.Text(report), nil
+				return mcp.NewResult(blocks...), nil
 			},
 		},
 	}
@@ -374,9 +225,16 @@ func (b *DevBrowser) formatSelectedElementReport(data *selectedElementData) stri
 		if len(locations) > 0 {
 			sb.WriteString("\nSource Code Location:\n")
 			for _, loc := range locations {
-				sb.WriteString(fmt.Sprintf("- File: %s:%d\n", loc.File, loc.Line))
+				sb.WriteString(fmt.Sprintf("- [%s] %s:%d", loc.Kind, loc.File, loc.Line))
+				if loc.Token != "" {
+					sb.WriteString(fmt.Sprintf(" (%s)", loc.Token))
+				}
+				sb.WriteString("\n")
 				if loc.Match != "" {
-					sb.WriteString(fmt.Sprintf("  Match: `%s`\n", loc.Match))
+					sb.WriteString(fmt.Sprintf("  `%s`\n", loc.Match))
+				}
+				if loc.Origin != "" {
+					sb.WriteString(fmt.Sprintf("  origin: %s\n", loc.Origin))
 				}
 			}
 		}

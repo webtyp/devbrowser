@@ -6,13 +6,14 @@
 //
 //	go test -tags repro ./ -run TestReproSetWindowBoundsIgnored -v
 //	go test -tags repro ./ -run TestReproManualMoveDetected   -v -timeout 60s
-package devbrowser
+package devbrowser_test
 
 import (
 	"context"
 	"sync"
 	"testing"
 	"time"
+	"webtyp.com/devbrowser"
 
 	"webtyp.com/devbrowser/cdproto/browser"
 	"webtyp.com/devbrowser/chromedp"
@@ -70,7 +71,7 @@ func TestReproSetWindowBoundsIgnored(t *testing.T) {
 		"browser_position": "0,0",
 		"browser_size":     "800,600",
 	}}
-	b := New(reproUI{}, store, make(chan bool))
+	b := devbrowser.New(reproUI{}, store, make(chan bool))
 	b.SetLog(func(a ...any) { t.Log(a...) })
 	b.SetHeadless(false)
 
@@ -139,7 +140,7 @@ func TestReproManualMoveDetected(t *testing.T) {
 		"browser_position": "0,0",
 		"browser_size":     "800,600",
 	}}
-	b := New(reproUI{}, store, make(chan bool))
+	b := devbrowser.New(reproUI{}, store, make(chan bool))
 	b.SetLog(func(a ...any) { t.Log(a...) })
 	b.SetHeadless(false)
 

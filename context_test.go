@@ -1,3 +1,4 @@
+// Root-level test (justified): exercises buildAllocatorOptions and flagTestType — the Chrome flags are built before launch and no public API returns them (guards the SPKI/test-type flags).
 package devbrowser
 
 import (

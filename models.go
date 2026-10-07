@@ -193,7 +193,10 @@ var SaveScreenshotArgsModel = model.Definition{
 
 var GetSelectedElementArgsModel = model.Definition{
 	Name: "get_selected_element_args",
-	Fields: model.Fields{},
+	Fields: model.Fields{
+		{Name: "count", Type: model.Int()},
+		{Name: "clear", Type: model.Bool()},
+	},
 }
 
 type InterceptedRequest struct {

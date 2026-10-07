@@ -1,10 +1,11 @@
-package devbrowser
+package devbrowser_test
 
 import (
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
+	"webtyp.com/devbrowser"
 )
 
 func TestResolveChromeExecPath(t *testing.T) {
@@ -46,7 +47,7 @@ func TestResolveChromeExecPath(t *testing.T) {
 	os.Unsetenv("CHROME_EXECPATH")
 
 	// Execute resolution
-	resolved := ResolveChromeExecPath()
+	resolved := devbrowser.ResolveChromeExecPath()
 
 	// It should have resolved to our working 'google-chrome'
 	if resolved != chromePath {
@@ -55,14 +56,14 @@ func TestResolveChromeExecPath(t *testing.T) {
 
 	// Now test CHROME_EXECPATH override
 	os.Setenv("CHROME_EXECPATH", chromePath)
-	resolved = ResolveChromeExecPath()
+	resolved = devbrowser.ResolveChromeExecPath()
 	if resolved != chromePath {
 		t.Errorf("Expected to honor CHROME_EXECPATH %s, but got %s", chromePath, resolved)
 	}
 
 	// Test CHROME_EXECPATH pointing to a broken one
 	os.Setenv("CHROME_EXECPATH", chromiumPath)
-	resolved = ResolveChromeExecPath()
+	resolved = devbrowser.ResolveChromeExecPath()
 	// Since CHROME_EXECPATH is broken, it should fall back to searching PATH and find google-chrome
 	if resolved != chromePath {
 		t.Errorf("Expected to skip broken CHROME_EXECPATH and resolve to %s, but got %s", chromePath, resolved)
@@ -96,7 +97,7 @@ func TestResolveChromeExecPath_Order(t *testing.T) {
 	os.Unsetenv("CHROME_EXECPATH")
 
 	// Even if both work, google-chrome should be preferred
-	resolved := ResolveChromeExecPath()
+	resolved := devbrowser.ResolveChromeExecPath()
 	if resolved != chromePath {
 		t.Errorf("Expected to prefer google-chrome over chromium, but got %s", resolved)
 	}

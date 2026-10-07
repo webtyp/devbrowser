@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"webtyp.com/context"
+	wpath "webtyp.com/filepath"
 	"webtyp.com/mcp"
 )
 
@@ -78,7 +79,7 @@ func (b *DevBrowser) GetScreenshotTools() []mcp.Tool {
 
 				if !args.Overwrite {
 					if _, err := os.Stat(fullPath); err == nil {
-						return nil, fmt.Errorf("file already exists: %s", fullPath)
+						return nil, fmt.Errorf("file already exists: %s", wpath.Tilde(fullPath))
 					}
 				}
 
@@ -124,7 +125,7 @@ func (b *DevBrowser) GetScreenshotTools() []mcp.Tool {
 					"Screenshot saved to: %s\n"+
 						"Dimensions: %dx%d\n"+
 						"Emulation Mode: %s\n",
-					fullPath,
+					wpath.Tilde(fullPath),
 					res.Width, res.Height,
 					emulationMode,
 				)

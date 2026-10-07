@@ -8,7 +8,7 @@ import (
 
 	"webtyp.com/devbrowser/cdproto/cdp"
 	"webtyp.com/devbrowser/chromedp"
-	"webtyp.com/fmt/lang"
+	"webtyp.com/lang"
 )
 
 type Store interface {
@@ -56,8 +56,12 @@ type DevBrowser struct {
 	LastHttps bool
 	LastURL   string
 
-	LastInspectedBackendNodeID cdp.BackendNodeID
-	SourceLocator              SourceLocator
+	SourceLocator SourceLocator
+
+	selections                selectionHistory  // guarded by Mu
+	lastPanelNodeID           cdp.BackendNodeID // guarded by Mu; last DevTools panel node captured
+	selectionCaptureInstalled bool              // guarded by Mu
+	captureMu                 sync.Mutex        // serializes captureSelection
 
 	IsOpenFlag bool // Indica si el navegador está abierto
 
