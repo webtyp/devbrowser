@@ -2,6 +2,7 @@ package devbrowser
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -35,6 +36,10 @@ func (h *DevBrowser) buildAllocatorOptions() []chromedp.ExecAllocatorOption {
 		chromedp.Flag("ozone-platform", "x11"),
 		chromedp.Flag("window-position", h.Position),
 		chromedp.WindowSize(h.Width, h.Height),
+		// Chrome 113+: never show the "Restore pages?" bubble. Third layer only:
+		// older builds or distro Chromium may not know it, and Chrome ignores
+		// unknown switches.
+		chromedp.Flag("hide-crash-restore-bubble", true),
 	)
 
 	// Always enable DevTools for non-headless sessions
@@ -64,6 +69,9 @@ func (h *DevBrowser) buildAllocatorOptions() []chromedp.ExecAllocatorOption {
 		if profileLocked(h.ProfileDir) {
 			h.profileFallbackReason = "locked by another process"
 		} else {
+			if err := markProfileExitedCleanly(h.ProfileDir); err != nil {
+				h.Logger(fmt.Sprintf("browser profile: could not mark clean exit: %v", err))
+			}
 			opts = append(opts, chromedp.UserDataDir(h.ProfileDir))
 		}
 	}
@@ -86,14 +94,7 @@ func profileLocked(dir string) bool {
 }
 
 func (h *DevBrowser) CreateBrowserContext() error {
-	if h.Cancel != nil {
-		h.Cancel()
-		h.Cancel = nil
-	}
-	if h.AllocCancel != nil {
-		h.AllocCancel()
-		h.AllocCancel = nil
-	}
+	h.shutdownChrome()
 
 	opts := h.buildAllocatorOptions()
 
