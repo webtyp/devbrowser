@@ -2,6 +2,8 @@
 PLAN: "fix(devbrowser): Chrome se cierra ordenadamente y el aviso «Restore pages?» no vuelve a aparecer"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 15705319383734565078
 ---
 
 # Plan — El aviso «Restore pages?» en cada arranque del navegador de desarrollo
