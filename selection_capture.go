@@ -186,10 +186,15 @@ func (b *DevBrowser) installSelectionCapture() {
 			// badges are gone, so the history they numbered goes with them.
 			// An SPA route change (pushState) keeps the document and does not
 			// fire this.
+			// In a goroutine, like the captures above: a listener runs on
+			// chromedp's event loop and must never wait on b.Mu, which a
+			// caller may hold while it waits on chromedp.
 			if e.Frame != nil && e.Frame.ParentID == "" {
-				b.Mu.Lock()
-				b.selections.clear()
-				b.Mu.Unlock()
+				go func() {
+					b.Mu.Lock()
+					b.selections.clear()
+					b.Mu.Unlock()
+				}()
 			}
 		}
 	})
