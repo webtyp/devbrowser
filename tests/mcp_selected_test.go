@@ -269,20 +269,58 @@ func TestSelectedElement_HistoryCap(t *testing.T) {
 		t.Errorf("unexpected clear result: %s", content)
 	}
 
+	// clear removes the badges too, so numbering starts over.
 	h.altClick("#b1")
-	h.waitFor("Selection #13 ")
+	h.waitFor("Selection #1 ")
 }
 
-func TestSelectedElement_SurvivesReload(t *testing.T) {
-	h := newSelectedHarness(t, `<button id="a">A</button>`)
+// A reload wipes the badges, so the numbers already handed out no longer
+// point at anything: the history empties and numbering starts over at 1. The
+// capture itself survives (the page script is registered for every document).
+func TestSelectedElement_ReloadStartsOver(t *testing.T) {
+	h := newSelectedHarness(t, `<button id="a">A</button><button id="b">B</button>`)
 	h.mustCall(`{}`)
 
 	h.altClick("#a")
-	h.waitFor("Selection #1")
+	h.waitFor("Selection #1 ")
+	h.altClick("#b")
+	h.waitFor("Selection #2 ")
 
 	if err := chromedp.Run(h.ctx, chromedp.Reload(), chromedp.WaitReady("body")); err != nil {
 		t.Fatalf("reload: %v", err)
 	}
-	h.altClick("#a")
-	h.waitFor("Selection #2")
+	deadline := time.Now().Add(3 * time.Second)
+	for !strings.Contains(h.mustCall(`{}`), "No element selected") {
+		if time.Now().After(deadline) {
+			t.Fatalf("history must be empty after a reload: %s", h.mustCall(`{"count":10}`))
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	h.altClick("#b")
+	content := h.waitFor("Selection #1 ")
+	if strings.Contains(content, "Selection #2 ") {
+		t.Errorf("only the selection made after the reload must remain: %s", content)
+	}
+}
+
+// Alt+clicking an icon lands on an SVG <path>, which no developer means: the
+// selection climbs to the control that owns the icon, or to the <svg> itself
+// when no control does.
+func TestSelectedElement_IconSelectsItsControl(t *testing.T) {
+	icon := `<svg viewBox="0 0 24 24" width="48" height="48"><path d="M0 0h24v24H0z"></path></svg>`
+	h := newSelectedHarness(t, `<button id="eye" type="button">`+icon+`</button><div id="logo">`+icon+`</div>`)
+	h.mustCall(`{}`)
+
+	h.altClick("#eye path")
+	content := h.waitFor("Selection #1 ")
+	if !strings.Contains(content, "Selected Element: <button") {
+		t.Errorf("alt+click on a button's icon must select the button: %s", content)
+	}
+
+	h.altClick("#logo path")
+	content = h.waitFor("Selection #2 ")
+	if !strings.Contains(content[:strings.Index(content, "Selection #1 ")], "Selected Element: <svg") {
+		t.Errorf("alt+click on a bare icon must select the <svg>: %s", content)
+	}
 }

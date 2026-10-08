@@ -55,9 +55,22 @@ var enqueueSelectionJS = fmt.Sprintf(`function() { (window.%[1]s = window.%[1]s 
 
 // captureSelectionJS takes the next queued element, scrolls it into view and
 // describes it.
+//
+// A click on an icon lands on an SVG <path> or <circle>, which nobody means to
+// select: the target climbs out of the outermost <svg> to the control that owns
+// the icon, or stays on that <svg> when no control does. Done here, for every
+// selection source, so the duplicate check and the badge see the same node.
 var captureSelectionJS = fmt.Sprintf(`(() => {
 	%[1]s
-	const target = (window.%[2]s || []).shift() || null;
+	let target = (window.%[2]s || []).shift() || null;
+	if (target instanceof Element && target.closest('svg')) {
+		let svg = target.closest('svg');
+		for (let p = svg.parentElement; p; p = p.parentElement) {
+			if (p.tagName.toLowerCase() === 'svg') svg = p;
+		}
+		const control = svg.parentElement && svg.parentElement.closest('button, a[href], label, summary, [role="button"], [role="link"], [role="tab"], [role="menuitem"], [role="option"], [role="checkbox"], [role="switch"]');
+		target = control || svg;
+	}
 	window.%[3]s = target;
 	if (!target || !(target instanceof Element)) {
 		return JSON.stringify({ hasSelection: false });
@@ -168,6 +181,16 @@ func (b *DevBrowser) installSelectionCapture() {
 			if e.Name == selectionBindingName {
 				go b.captureSelection(SelectionAltClick)
 			}
+		case *page.EventFrameNavigated:
+			// The main frame got a new document (reload or navigation): its
+			// badges are gone, so the history they numbered goes with them.
+			// An SPA route change (pushState) keeps the document and does not
+			// fire this.
+			if e.Frame != nil && e.Frame.ParentID == "" {
+				b.Mu.Lock()
+				b.selections.clear()
+				b.Mu.Unlock()
+			}
 		}
 	})
 
@@ -176,6 +199,7 @@ func (b *DevBrowser) installSelectionCapture() {
 	_ = chromedp.Run(ctx,
 		dom.Enable(),
 		overlay.Enable(),
+		page.Enable(), // EventFrameNavigated, which clears the history on reload
 		runtime.AddBinding(selectionBindingName),
 		chromedp.ActionFunc(func(c context.Context) error {
 			_, err := page.AddScriptToEvaluateOnNewDocument(selectionPageScriptJS).Do(c)

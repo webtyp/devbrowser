@@ -21,7 +21,7 @@ const (
 // selection is a snapshot taken when the element was selected. It never
 // references the live node again (webtyp/dom replaces nodes on re-render).
 type selection struct {
-	seq        int // 1, 2, 3… for the browser session; equals the badge number on the page
+	seq        int // 1, 2, 3… since the page was loaded or cleared; equals the badge number on the page
 	source     SelectionSource
 	at         time.Time
 	pageURL    string
@@ -66,10 +66,13 @@ func (h *selectionHistory) latest(n int) []selection {
 // len returns how many items are held.
 func (h *selectionHistory) len() int { return len(h.items) }
 
-// clear empties the history and returns how many items it held. nextSeq is NOT reset,
-// so badge numbers never repeat within a browser session.
+// clear empties the history, restarts numbering at 1 and returns how many items it
+// held. It runs whenever the badges disappear — an explicit clear removes them, a
+// reload or navigation discards the document that held them — because a number
+// that no longer marks anything on the page only misleads.
 func (h *selectionHistory) clear() int {
 	n := len(h.items)
 	h.items = nil
+	h.nextSeq = 0
 	return n
 }
