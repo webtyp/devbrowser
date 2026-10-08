@@ -1,8 +1,10 @@
 package devbrowser
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -50,4 +52,51 @@ func WithProfile(root string) Option {
 
 		b.ProfileDir = dir
 	}
+}
+
+// markProfileExitedCleanly rewrites <dir>/Default/Preferences so Chrome
+// believes its last run closed normally. Without it, a daemon killed without
+// closing the browser leaves exit_type "Crashed" and every start shows
+// "Restore pages?". A missing file is fine (fresh profile); an unreadable or
+// invalid one is left untouched and reported — the profile holds the
+// developer's logins and is never deleted or rewritten blindly.
+func markProfileExitedCleanly(dir string) error {
+	prefsPath := filepath.Join(dir, "Default", "Preferences")
+	data, err := os.ReadFile(prefsPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+
+	// UseNumber keeps every number as written: Chrome stores int64 values in
+	// Preferences, and a float64 round trip would rewrite any above 2^53.
+	var prefs map[string]any
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	if err := dec.Decode(&prefs); err != nil {
+		return err
+	}
+
+	profileObj, ok := prefs["profile"].(map[string]any)
+	if !ok {
+		profileObj = make(map[string]any)
+		prefs["profile"] = profileObj
+	}
+
+	profileObj["exit_type"] = "Normal"
+	profileObj["exited_cleanly"] = true
+
+	out, err := json.Marshal(prefs)
+	if err != nil {
+		return err
+	}
+
+	tmpPath := prefsPath + ".tmp"
+	if err := os.WriteFile(tmpPath, out, 0600); err != nil {
+		return err
+	}
+
+	return os.Rename(tmpPath, prefsPath)
 }
