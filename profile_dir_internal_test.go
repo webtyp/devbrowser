@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -80,6 +81,28 @@ func TestMarkProfileExitedCleanly(t *testing.T) {
 		}
 		if string(data) != invalidJSON {
 			t.Errorf("expected file to remain unchanged, got %s", string(data))
+		}
+	})
+
+	t.Run("Large integers survive the rewrite", func(t *testing.T) {
+		dir := t.TempDir()
+		if err := os.Mkdir(filepath.Join(dir, "Default"), 0700); err != nil {
+			t.Fatal(err)
+		}
+		prefsPath := filepath.Join(dir, "Default", "Preferences")
+		const big = "13370000000000000123" // > 2^53: a float64 round trip changes it
+		if err := os.WriteFile(prefsPath, []byte(`{"profile":{"exit_type":"Crashed"},"ts":`+big+`}`), 0600); err != nil {
+			t.Fatal(err)
+		}
+		if err := markProfileExitedCleanly(dir); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		data, err := os.ReadFile(prefsPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(data), `"ts":`+big) {
+			t.Errorf("large integer was rewritten: %s", data)
 		}
 	})
 }

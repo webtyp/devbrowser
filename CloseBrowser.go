@@ -12,22 +12,33 @@ const gracefulCloseTimeout = 3 * time.Second
 // shutdownChrome asks Chrome to close itself first (Browser.close): a process
 // killed by the allocator records exit_type "Crashed" in the profile, and the
 // next start shows the "Restore pages?" bubble over DevTools. The allocator
-// cancel below stays as the last step, so a hung Chrome is still killed and no
-// second window survives (the about:blank "double window" bug).
+// cancel below still runs, so a hung Chrome is killed and no second window
+// survives (the about:blank "double window" bug).
 func (h *DevBrowser) shutdownChrome() {
+	// Only a context that actually started Chrome can close it gracefully.
+	// Without a browser, chromedp's "allocated" channel is a one-token
+	// semaphore: chromedp.Cancel would take the token and h.Cancel below would
+	// then wait for a second one forever.
 	if h.Ctx != nil {
-		closeCtx, closeCancel := context.WithTimeout(h.Ctx, gracefulCloseTimeout)
-		_ = chromedp.Cancel(closeCtx)
-		closeCancel()
+		if c := chromedp.FromContext(h.Ctx); c != nil && c.Browser != nil {
+			closeCtx, closeCancel := context.WithTimeout(h.Ctx, gracefulCloseTimeout)
+			_ = chromedp.Cancel(closeCtx)
+			closeCancel()
+		}
 		h.Ctx = nil
+	}
+	// The allocator goes BEFORE the context cancel. When the graceful close
+	// fails, chromedp has already marked the browser as closing itself and
+	// returns without killing it; the context cancel then waits for the
+	// process to exit, forever. Cancelling the allocator kills a Chrome that is
+	// still alive (a no-op when it already exited), so the wait below ends.
+	if h.AllocCancel != nil {
+		h.AllocCancel()
+		h.AllocCancel = nil
 	}
 	if h.Cancel != nil {
 		h.Cancel()
 		h.Cancel = nil
-	}
-	if h.AllocCancel != nil {
-		h.AllocCancel()
-		h.AllocCancel = nil
 	}
 }
 

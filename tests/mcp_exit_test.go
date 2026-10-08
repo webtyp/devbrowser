@@ -4,18 +4,18 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
-    "time"
-    "net/url"
+	"time"
 
 	"webtyp.com/devbrowser"
 )
 
 type dummyUI struct{}
 
-func (d *dummyUI) RefreshUI() {}
+func (d *dummyUI) RefreshUI()         {}
 func (d *dummyUI) ReturnFocus() error { return nil }
 
 type dummyStore struct{}
@@ -45,11 +45,12 @@ func TestProfileExitedCleanlyIntegration(t *testing.T) {
 	exitChan := make(chan bool, 1)
 
 	b := devbrowser.New(&dummyUI{}, &dummyStore{}, exitChan, devbrowser.WithProfile(projectRoot))
+	b.SetLog(func(...any) {})
 	b.SetHeadless(true)
 
 	b.OpenBrowser(port, false)
 
-    time.Sleep(1 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	if err := b.NavigateToURL(ts.URL); err != nil {
 		t.Fatalf("failed to navigate: %v", err)

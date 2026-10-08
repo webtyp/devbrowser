@@ -1,6 +1,7 @@
 package devbrowser
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -69,8 +70,12 @@ func markProfileExitedCleanly(dir string) error {
 		return err
 	}
 
+	// UseNumber keeps every number as written: Chrome stores int64 values in
+	// Preferences, and a float64 round trip would rewrite any above 2^53.
 	var prefs map[string]any
-	if err := json.Unmarshal(data, &prefs); err != nil {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	if err := dec.Decode(&prefs); err != nil {
 		return err
 	}
 
