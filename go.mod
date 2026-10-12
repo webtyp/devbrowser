@@ -9,7 +9,7 @@ require (
 	webtyp.com/filepath v0.1.0
 	webtyp.com/fmt v1.0.0
 	webtyp.com/json v0.5.29
-	webtyp.com/lang v0.1.3
+	webtyp.com/lang v0.1.5
 	webtyp.com/mcp v0.3.0
 	webtyp.com/model v0.2.2
 )
