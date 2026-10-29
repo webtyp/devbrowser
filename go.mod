@@ -11,7 +11,7 @@ require (
 	webtyp.com/json v0.5.29
 	webtyp.com/lang v0.1.6
 	webtyp.com/mcp v0.3.0
-	webtyp.com/model v0.2.8
+	webtyp.com/model v0.2.11
 )
 
 require (
