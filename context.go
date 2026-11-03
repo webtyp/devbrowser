@@ -113,9 +113,7 @@ func (h *DevBrowser) CreateBrowserContext() error {
 			if strings.HasPrefix(format, "could not unmarshal event") {
 				return
 			}
-			errorArgs := append([]any{"ERROR: "}, args...)
-			// Forward error to devbrowser log
-			h.Log(errorArgs...)
+			h.Log("ERROR:", fmt.Sprintf(format, args...))
 		}),
 	)
 	h.Ctx = ctx

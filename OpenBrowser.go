@@ -59,6 +59,14 @@ func (h *DevBrowser) Open(rawURL string) error {
 			return
 		}
 
+		// Start Chrome now: an empty Run allocates the browser. If it fails, the
+		// context is spent — a second Run on it would allocate again and close
+		// chromedp's allocated channel twice (panic) — so stop here.
+		if err := chromedp.Run(h.Ctx); err != nil {
+			h.ErrChan <- fmt.Errorf("chrome failed to start: %v", err)
+			return
+		}
+
 		// Initialize console log capturing BEFORE navigating to the page
 		// This ensures all console.log statements from page load are captured
 		if err := h.initializeConsoleCapture(); err != nil {

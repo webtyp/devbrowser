@@ -78,10 +78,7 @@ func (b *DevBrowser) initializeConsoleCapture() error {
 			defer b.LogsMutex.Unlock()
 
 			// Capture Audit Issues (Cookie warnings, Mixed Content, etc.)
-			msg := fmt.Sprintf("[Issue] %s", ev.Issue.Code)
-			// Details are often complex structs, so we stick to the code mostly.
-			// Ideally we could parse Issue.Details but it is a complex union type.
-			b.ConsoleLogs = append(b.ConsoleLogs, msg)
+			b.ConsoleLogs = append(b.ConsoleLogs, issueMessage(ev.Issue))
 
 		case *runtime.EventExecutionContextsCleared:
 			// Clear logs when execution contexts are cleared (page reload/navigation)
@@ -132,4 +129,19 @@ func (b *DevBrowser) ClearConsoleLogs() error {
 
 	b.ConsoleLogs = []string{}
 	return nil
+}
+
+// issueMessage is one console line for an audit issue: its code and, for a
+// generic issue (forms, ORB), what is wrong and on which attribute — the code
+// alone ("GenericIssue") says nothing.
+func issueMessage(issue *audits.InspectorIssue) string {
+	msg := "[Issue] " + issue.Code.String()
+	if d := issue.Details; d != nil && d.GenericIssueDetails != nil {
+		g := d.GenericIssueDetails
+		msg += " " + g.ErrorType.String()
+		if g.ViolatingNodeAttribute != "" {
+			msg += " (" + g.ViolatingNodeAttribute + ")"
+		}
+	}
+	return msg
 }
