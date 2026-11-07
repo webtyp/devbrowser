@@ -8,10 +8,10 @@ require (
 	webtyp.com/context v0.0.23
 	webtyp.com/filepath v0.1.0
 	webtyp.com/fmt v1.0.0
-	webtyp.com/json v0.5.29
+	webtyp.com/json v0.5.40
 	webtyp.com/lang v0.1.14
 	webtyp.com/mcp v0.3.0
-	webtyp.com/model v0.2.11
+	webtyp.com/model v0.2.12
 )
 
 require (
