@@ -58,9 +58,15 @@ func (h *DevBrowser) buildAllocatorOptions() []chromedp.ExecAllocatorOption {
 		)
 	}
 
-	if h.TrustDevCertSPKI != "" {
+	spki := h.TrustDevCertSPKI
+	if h.ResolveTrustDevCertSPKI != nil {
+		if live, err := h.ResolveTrustDevCertSPKI(); err == nil && live != "" {
+			spki = live
+		}
+	}
+	if spki != "" {
 		opts = append(opts,
-			chromedp.Flag(FlagSPKIList, h.TrustDevCertSPKI),
+			chromedp.Flag(FlagSPKIList, spki),
 			chromedp.Flag(flagTestType, true),
 		)
 	}

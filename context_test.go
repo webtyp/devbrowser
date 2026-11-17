@@ -62,6 +62,18 @@ func TestBuildAllocatorOptions_SPKI(t *testing.T) {
 		}
 	})
 
+	t.Run("ResolveTrustDevCertSPKI overrides stale TrustDevCertSPKI", func(t *testing.T) {
+		const rotatedPin = "rotatedPinValue12345678901234567890123456="
+		b := &DevBrowser{
+			TrustDevCertSPKI:        "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=",
+			ResolveTrustDevCertSPKI: func() (string, error) { return rotatedPin, nil },
+		}
+		flags := parseExecAllocatorOptions(b.buildAllocatorOptions())
+		if val := flags[FlagSPKIList]; val != rotatedPin {
+			t.Errorf("expected rotated SPKI %q, got %q", rotatedPin, val)
+		}
+	})
+
 	// The SPKI flag is "unsupported" in Chrome's eyes, so without test-type every
 	// dev window opens under a yellow "You are using an unsupported command-line
 	// flag … Stability and security will suffer." bar.

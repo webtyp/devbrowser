@@ -38,6 +38,9 @@ type DevBrowser struct {
 	//
 	// Obtain it from webtyp.com/server/httpd.LocalCertSPKI(). Empty = no pin.
 	TrustDevCertSPKI string
+	// ResolveTrustDevCertSPKI, when set, is called at each browser launch so a rotated
+	// local dev certificate is picked up without restarting the daemon.
+	ResolveTrustDevCertSPKI func() (string, error)
 
 	// DevToolsReserved is true when auto-open-devtools-for-tabs was launched
 	// for this session (context.go decides this once, at CreateBrowserContext

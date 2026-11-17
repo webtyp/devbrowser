@@ -154,46 +154,46 @@ func (b *DevBrowser) formatSelectedElementReport(data *selectedElementData) stri
 		dataKeyStr = *data.Identity.DataKey
 	}
 
-	sb.WriteString(fmt.Sprintf("Selected Element: <%s", data.Identity.TagName))
+	fmt.Fprintf(&sb, "Selected Element: <%s", data.Identity.TagName)
 	if idStr != "" {
-		sb.WriteString(fmt.Sprintf(" id=%q", idStr))
+		fmt.Fprintf(&sb, " id=%q", idStr)
 	}
 	if classStr != "" {
-		sb.WriteString(fmt.Sprintf(" class=%q", classStr))
+		fmt.Fprintf(&sb, " class=%q", classStr)
 	}
 	if dataKeyStr != "" {
-		sb.WriteString(fmt.Sprintf(" data-key=%q", dataKeyStr))
+		fmt.Fprintf(&sb, " data-key=%q", dataKeyStr)
 	}
 	sb.WriteString(">\n")
 
 	if data.Breadcrumbs != "" {
-		sb.WriteString(fmt.Sprintf("Hierarchy (Breadcrumbs): %s\n", data.Breadcrumbs))
+		fmt.Fprintf(&sb, "Hierarchy (Breadcrumbs): %s\n", data.Breadcrumbs)
 	}
 	if data.Identity.Text != "" {
-		sb.WriteString(fmt.Sprintf("Visible Text: %q\n", data.Identity.Text))
+		fmt.Fprintf(&sb, "Visible Text: %q\n", data.Identity.Text)
 	}
 
 	sb.WriteString("\nWebTyp Identifiers:\n")
-	sb.WriteString(fmt.Sprintf("- Tag: %s\n", data.Identity.TagName))
+	fmt.Fprintf(&sb, "- Tag: %s\n", data.Identity.TagName)
 	if idStr != "" {
-		sb.WriteString(fmt.Sprintf("- ID: %s\n", idStr))
+		fmt.Fprintf(&sb, "- ID: %s\n", idStr)
 	}
 	if dataKeyStr != "" {
-		sb.WriteString(fmt.Sprintf("- Data-Key: %s\n", dataKeyStr))
+		fmt.Fprintf(&sb, "- Data-Key: %s\n", dataKeyStr)
 	}
 	if classStr != "" {
-		sb.WriteString(fmt.Sprintf("- Classes: %s\n", classStr))
+		fmt.Fprintf(&sb, "- Classes: %s\n", classStr)
 	}
 	if data.Identity.DataComponent != nil && *data.Identity.DataComponent != "" {
-		sb.WriteString(fmt.Sprintf("- Component: %s\n", *data.Identity.DataComponent))
+		fmt.Fprintf(&sb, "- Component: %s\n", *data.Identity.DataComponent)
 	}
 
 	sb.WriteString("\nGeometry & Layout:\n")
-	sb.WriteString(fmt.Sprintf("- Size: %.1f x %.1f px\n", data.BoxModel.Width, data.BoxModel.Height))
+	fmt.Fprintf(&sb, "- Size: %.1f x %.1f px\n", data.BoxModel.Width, data.BoxModel.Height)
 	if disp, ok := data.Layout["display"].(string); ok && disp != "" {
-		sb.WriteString(fmt.Sprintf("- Display: %s\n", disp))
+		fmt.Fprintf(&sb, "- Display: %s\n", disp)
 	}
-	sb.WriteString(fmt.Sprintf("- Viewport Position: (x: %.1f, y: %.1f)\n", data.Position.Left, data.Position.Top))
+	fmt.Fprintf(&sb, "- Viewport Position: (x: %.1f, y: %.1f)\n", data.Position.Left, data.Position.Top)
 
 	if data.OuterHTML != "" {
 		sb.WriteString("\nOuter HTML:\n")
@@ -225,16 +225,16 @@ func (b *DevBrowser) formatSelectedElementReport(data *selectedElementData) stri
 		if len(locations) > 0 {
 			sb.WriteString("\nSource Code Location:\n")
 			for _, loc := range locations {
-				sb.WriteString(fmt.Sprintf("- [%s] %s:%d", loc.Kind, loc.File, loc.Line))
+				fmt.Fprintf(&sb, "- [%s] %s:%d", loc.Kind, loc.File, loc.Line)
 				if loc.Token != "" {
-					sb.WriteString(fmt.Sprintf(" (%s)", loc.Token))
+					fmt.Fprintf(&sb, " (%s)", loc.Token)
 				}
 				sb.WriteString("\n")
 				if loc.Match != "" {
-					sb.WriteString(fmt.Sprintf("  `%s`\n", loc.Match))
+					fmt.Fprintf(&sb, "  `%s`\n", loc.Match)
 				}
 				if loc.Origin != "" {
-					sb.WriteString(fmt.Sprintf("  origin: %s\n", loc.Origin))
+					fmt.Fprintf(&sb, "  origin: %s\n", loc.Origin)
 				}
 			}
 		}

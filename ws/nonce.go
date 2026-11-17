@@ -3,10 +3,10 @@ package ws
 import (
 	"bufio"
 	"bytes"
+	"crypto/rand"
 	"crypto/sha1"
 	"encoding/base64"
 	"fmt"
-	"math/rand"
 )
 
 const (
@@ -25,11 +25,13 @@ const (
 	acceptSize = 28 // base64.StdEncoding.EncodedLen(sha1.Size)
 )
 
+var randRead = rand.Read
+
 // initNonce fills given slice with random base64-encoded nonce bytes.
 func initNonce(dst []byte) {
 	// NOTE: bts does not escape.
 	bts := make([]byte, nonceKeySize)
-	if _, err := rand.Read(bts); err != nil {
+	if _, err := randRead(bts); err != nil {
 		panic(fmt.Sprintf("rand read error: %s", err))
 	}
 	base64.StdEncoding.Encode(dst, bts)

@@ -3,7 +3,6 @@ package wsutil
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 
 	"webtyp.com/devbrowser/ws"
 )
@@ -30,7 +29,7 @@ func ReadMessage(r io.Reader, s ws.State, m []Message) ([]Message, error) {
 		State:     s,
 		CheckUTF8: true,
 		OnIntermediate: func(hdr ws.Header, src io.Reader) error {
-			bts, err := ioutil.ReadAll(src)
+			bts, err := io.ReadAll(src)
 			if err != nil {
 				return err
 			}
@@ -272,7 +271,7 @@ func readData(rw io.ReadWriter, s ws.State, want ws.OpCode) ([]byte, ws.OpCode, 
 			continue
 		}
 
-		bts, err := ioutil.ReadAll(&rd)
+		bts, err := io.ReadAll(&rd)
 
 		return bts, hdr.OpCode, err
 	}

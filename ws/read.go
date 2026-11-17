@@ -66,12 +66,12 @@ func ReadHeader(r io.Reader) (h Header, err error) {
 		return h, err
 	}
 
-	switch {
-	case length == 126:
+	switch length {
+	case 126:
 		h.Length = int64(binary.BigEndian.Uint16(bts[:2]))
 		bts = bts[2:]
 
-	case length == 127:
+	case 127:
 		if bts[0]&0x80 != 0 {
 			err = ErrHeaderLengthMSB
 			return h, err

@@ -9,7 +9,6 @@ package intern
 
 import (
 	"bytes"
-	"reflect"
 	"testing"
 	"unsafe"
 )
@@ -18,8 +17,8 @@ func TestString(t *testing.T) {
 	s := "abcde"
 	sub := String(s[1:4])
 	interned := String("bcd")
-	want := (*reflect.StringHeader)(unsafe.Pointer(&sub)).Data
-	got := (*reflect.StringHeader)(unsafe.Pointer(&interned)).Data
+	want := unsafe.StringData(sub)
+	got := unsafe.StringData(interned)
 	if want != got {
 		t.Errorf("failed to intern string")
 	}

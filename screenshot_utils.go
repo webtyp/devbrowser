@@ -80,7 +80,7 @@ func (b *DevBrowser) CaptureElementScreenshot(selector string) (*ScreenshotResul
 	}
 
 	// Capture basic context
-	err = chromedp.Run(b.Ctx,
+	_ = chromedp.Run(b.Ctx,
 		chromedp.Title(&res.PageTitle),
 		chromedp.Location(&res.PageURL),
 		chromedp.Evaluate(`window.innerWidth`, &res.Width),

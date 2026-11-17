@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
-	"io/ioutil"
 
 	"webtyp.com/devbrowser/ws"
 )
@@ -147,7 +146,7 @@ func (r *Reader) Read(p []byte) (n int, err error) {
 // It discards all frames of fragmented message.
 func (r *Reader) Discard() (err error) {
 	for {
-		_, err = io.Copy(ioutil.Discard, &r.raw)
+		_, err = io.Copy(io.Discard, &r.raw)
 		if err != nil {
 			break
 		}
@@ -221,7 +220,7 @@ func (r *Reader) NextFrame() (hdr ws.Header, err error) {
 			}
 			if err == nil {
 				// Ensure that src is empty.
-				_, err = io.Copy(ioutil.Discard, &r.raw)
+				_, err = io.Copy(io.Discard, &r.raw)
 			}
 			return hdr, err
 		}
@@ -324,12 +323,12 @@ func (r *Reader) readHeader(in io.Reader) (h ws.Header, err error) {
 		return h, err
 	}
 
-	switch {
-	case length == 126:
+	switch length {
+	case 126:
 		h.Length = int64(binary.BigEndian.Uint16(bts[:2]))
 		bts = bts[2:]
 
-	case length == 127:
+	case 127:
 		if bts[0]&0x80 != 0 {
 			err = ws.ErrHeaderLengthMSB
 			return h, err

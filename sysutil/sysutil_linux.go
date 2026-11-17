@@ -5,7 +5,7 @@ package sysutil
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"strconv"
 	"time"
 )
@@ -16,12 +16,12 @@ var (
 )
 
 func init() {
-	buf, err := ioutil.ReadFile("/proc/stat")
+	buf, err := os.ReadFile("/proc/stat")
 	if err != nil {
 		btime = time.Now()
 		return
 	}
-	for _, line := range bytes.SplitN(buf, lineEnd, -1) {
+	for _, line := range bytes.Split(buf, lineEnd) {
 		if bytes.HasPrefix(line, btimePrefix) {
 			t, err := strconv.ParseInt(string(line[len(btimePrefix):]), 10, 64)
 			if err != nil {

@@ -102,12 +102,12 @@ func (b *DevBrowser) getInterceptedRequests(filter string, limit int) (*mcp.Resu
 		if i > 0 {
 			res.WriteString("\n---\n")
 		}
-		res.WriteString(fmt.Sprintf("%d %s %s\n", r.Status, r.Method, r.URL))
+		fmt.Fprintf(&res, "%d %s %s\n", r.Status, r.Method, r.URL)
 		if r.RequestBody != "" {
-			res.WriteString(fmt.Sprintf("Request Body: %s\n", r.RequestBody))
+			fmt.Fprintf(&res, "Request Body: %s\n", r.RequestBody)
 		}
 		if r.ResponseBody != "" {
-			res.WriteString(fmt.Sprintf("Response Body: %s\n", r.ResponseBody))
+			fmt.Fprintf(&res, "Response Body: %s\n", r.ResponseBody)
 		}
 	}
 

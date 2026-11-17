@@ -1,6 +1,7 @@
 package ws
 
 import (
+	cryptorand "crypto/rand"
 	"fmt"
 	"math/rand"
 	"reflect"
@@ -36,10 +37,10 @@ func TestCipher(t *testing.T) {
 				)
 
 				p := make([]byte, n)
-				rand.Read(p)
+				cryptorand.Read(p)
 
 				var m [4]byte
-				rand.Read(m[:])
+				cryptorand.Read(m[:])
 
 				cases = append(cases, test{
 					in:     p,
@@ -72,11 +73,11 @@ func TestCipherChops(t *testing.T) {
 			b := make([]byte, n)
 			var m [4]byte
 
-			_, err := rand.Read(p)
+			_, err := cryptorand.Read(p)
 			if err != nil {
 				t.Fatal(err)
 			}
-			_, err = rand.Read(m[:])
+			_, err = cryptorand.Read(m[:])
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -156,13 +157,13 @@ func BenchmarkCipher(b *testing.B) {
 		},
 	} {
 		bts := make([]byte, bench.size)
-		_, err := rand.Read(bts)
+		_, err := cryptorand.Read(bts)
 		if err != nil {
 			b.Fatal(err)
 		}
 
 		var mask [4]byte
-		_, err = rand.Read(mask[:])
+		_, err = cryptorand.Read(mask[:])
 		if err != nil {
 			b.Fatal(err)
 		}

@@ -73,7 +73,7 @@ func (b *DevBrowser) GetNetworkTools() []mcp.Tool {
 					if log.Failed {
 						status = "Failed"
 					}
-					result.WriteString(fmt.Sprintf("%s %s %s (%dms) [%s] %s", status, log.Method, log.URL, log.Duration, log.Type, log.ErrorText))
+					fmt.Fprintf(&result, "%s %s %s (%dms) [%s] %s", status, log.Method, log.URL, log.Duration, log.Type, log.ErrorText)
 				}
 
 				return mcp.Text(result.String()), nil

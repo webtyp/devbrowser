@@ -51,7 +51,7 @@ func (b *DevBrowser) GetErrorTools() []mcp.Tool {
 					if i > 0 {
 						result.WriteString("\n---\n")
 					}
-					result.WriteString(fmt.Sprintf("Error: %s\n  at %s:%d:%d\n%s", err.Message, err.Source, err.LineNumber, err.ColumnNumber, err.StackTrace))
+					fmt.Fprintf(&result, "Error: %s\n  at %s:%d:%d\n%s", err.Message, err.Source, err.LineNumber, err.ColumnNumber, err.StackTrace)
 				}
 
 				return mcp.Text(result.String()), nil

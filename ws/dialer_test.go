@@ -4,10 +4,10 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	cryptorand "crypto/rand"
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net"
 	"net/http"
@@ -115,7 +115,7 @@ func makeAccept(nonce []byte) []byte {
 
 func BenchmarkPutAccept(b *testing.B) {
 	nonce := make([]byte, nonceSize)
-	_, err := rand.Read(nonce)
+	_, err := cryptorand.Read(nonce)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -128,7 +128,7 @@ func BenchmarkPutAccept(b *testing.B) {
 
 func BenchmarkCheckNonce(b *testing.B) {
 	nonce := make([]byte, nonceSize)
-	_, err := rand.Read(nonce)
+	_, err := cryptorand.Read(nonce)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -290,7 +290,7 @@ func TestDialerHandshake(t *testing.T) {
 					headerConnection: []string{"Upgrade"},
 					headerUpgrade:    []string{"websocket"},
 				},
-				Body:          ioutil.NopCloser(bytes.NewReader([]byte(`hello, gopher!`))),
+				Body:          io.NopCloser(bytes.NewReader([]byte(`hello, gopher!`))),
 				ContentLength: 14,
 			},
 			accept:     acceptValid,
@@ -327,7 +327,7 @@ func TestDialerHandshake(t *testing.T) {
 				ProtoMajor: 1,
 				ProtoMinor: 1,
 				Header:     make(http.Header),
-				Body: ioutil.NopCloser(bytes.NewReader(
+				Body: io.NopCloser(bytes.NewReader(
 					[]byte(`<error description here>`),
 				)),
 				ContentLength: 24,
@@ -462,7 +462,7 @@ func TestDialerHandshake(t *testing.T) {
 				switch test.accept {
 				case acceptInvalid:
 					k := make([]byte, nonceSize)
-					rand.Read(k)
+					cryptorand.Read(k)
 					nonce := string(k)
 					accept := makeAccept(strToBytes(nonce))
 					test.res.Header.Set(headerSecAccept, string(accept))
@@ -677,17 +677,20 @@ func BenchmarkDialer(b *testing.B) {
 	} {
 		// We need to "mock" the rand.Read method used to generate nonce random
 		// bytes for Sec-WebSocket-Key header.
-		rand.Seed(0)
+		rng := rand.New(rand.NewSource(0))
 		need := b.N * nonceKeySize
 		nonceBytes := make([]byte, need)
-		n, err := rand.Read(nonceBytes)
+		n, err := rng.Read(nonceBytes)
 		if err != nil {
 			b.Fatal(err)
 		}
 		if n != need {
 			b.Fatalf("not enough random nonce bytes: %d; want %d", n, need)
 		}
-		rand.Seed(0)
+		rng = rand.New(rand.NewSource(0))
+		oldRandRead := randRead
+		randRead = rng.Read
+		defer func() { randRead = oldRandRead }()
 
 		resp := &http.Response{
 			StatusCode: http.StatusSwitchingProtocols,

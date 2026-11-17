@@ -156,7 +156,7 @@ func ParseBigBytes(s string) (*big.Int, error) {
 	lastDigit := 0
 	hasComma := false
 	for _, r := range s {
-		if !(unicode.IsDigit(r) || r == '.' || r == ',') {
+		if !unicode.IsDigit(r) && r != '.' && r != ',' {
 			break
 		}
 		if r == ',' {
@@ -167,7 +167,7 @@ func ParseBigBytes(s string) (*big.Int, error) {
 
 	num := s[:lastDigit]
 	if hasComma {
-		num = strings.Replace(num, ",", "", -1)
+		num = strings.ReplaceAll(num, ",", "")
 	}
 
 	val := &big.Rat{}

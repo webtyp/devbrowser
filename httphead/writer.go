@@ -93,7 +93,6 @@ func (w *writer) write(p []byte) {
 	var n int
 	n, w.err = w.w.Write(p)
 	w.n += n
-	return
 }
 
 func (w *writer) result() (int, error) {

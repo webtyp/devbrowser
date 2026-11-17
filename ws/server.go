@@ -243,7 +243,7 @@ func (u HTTPUpgrader) Upgrade(r *http.Request, w http.ResponseWriter) (conn net.
 	}
 	if err == nil {
 		httpWriteResponseUpgrade(rw.Writer, strToBytes(nonce), hs, header.WriteTo)
-		err = rw.Writer.Flush()
+		err = rw.Flush()
 	} else {
 		var code int
 		if rej, ok := err.(*ConnectionRejectedError); ok {
@@ -255,7 +255,7 @@ func (u HTTPUpgrader) Upgrade(r *http.Request, w http.ResponseWriter) (conn net.
 		}
 		httpWriteResponseError(rw.Writer, err, code, header.WriteTo)
 		// Do not store Flush() error to not override already existing one.
-		_ = rw.Writer.Flush()
+		_ = rw.Flush()
 	}
 	return conn, rw, hs, err
 }

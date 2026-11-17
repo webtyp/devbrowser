@@ -21,7 +21,7 @@ func (opt Option) Size() int {
 func (opt Option) Copy(p []byte) Option {
 	n := copy(p, opt.Name)
 	opt.Name = p[:n]
-	opt.Parameters, p = opt.Parameters.Copy(p[n:])
+	opt.Parameters, _ = opt.Parameters.Copy(p[n:])
 	return opt
 }
 

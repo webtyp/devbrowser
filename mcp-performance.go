@@ -73,14 +73,14 @@ const GetPerformanceJS = `
 // FormatPerformanceReport builds a compact text report from raw JS metrics.
 func FormatPerformanceReport(pageURL string, metrics map[string]any) string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("Performance: %s\n", pageURL))
+	fmt.Fprintf(&b, "Performance: %s\n", pageURL)
 
 	// Memory
 	if heapUsed, ok := metrics["heapUsed"].(float64); ok {
 		heapTotal, _ := metrics["heapTotal"].(float64)
 		heapLimit, _ := metrics["heapLimit"].(float64)
-		b.WriteString(fmt.Sprintf("Memory:    JS Heap %.1f/%.1f MB (limit %d MB)\n",
-			heapUsed/1048576, heapTotal/1048576, int(heapLimit/1048576)))
+		fmt.Fprintf(&b, "Memory:    JS Heap %.1f/%.1f MB (limit %d MB)\n",
+			heapUsed/1048576, heapTotal/1048576, int(heapLimit/1048576))
 	}
 
 	// Timing
@@ -91,15 +91,15 @@ func FormatPerformanceReport(pageURL string, metrics map[string]any) string {
 		b.WriteString("Timing:    ")
 		sep := ""
 		if hasInteractive {
-			b.WriteString(fmt.Sprintf("Interactive %dms", int(domInteractive)))
+			fmt.Fprintf(&b, "Interactive %dms", int(domInteractive))
 			sep = " | "
 		}
 		if hasLoaded {
-			b.WriteString(fmt.Sprintf("%sDOM Loaded %dms", sep, int(domLoaded)))
+			fmt.Fprintf(&b, "%sDOM Loaded %dms", sep, int(domLoaded))
 			sep = " | "
 		}
 		if hasFullLoad {
-			b.WriteString(fmt.Sprintf("%sFull Load %dms", sep, int(fullLoad)))
+			fmt.Fprintf(&b, "%sFull Load %dms", sep, int(fullLoad))
 		}
 		b.WriteString("\n")
 	}
@@ -111,11 +111,11 @@ func FormatPerformanceReport(pageURL string, metrics map[string]any) string {
 		b.WriteString("Paint:     ")
 		sep := ""
 		if hasFP {
-			b.WriteString(fmt.Sprintf("FP %dms", int(fp)))
+			fmt.Fprintf(&b, "FP %dms", int(fp))
 			sep = " | "
 		}
 		if hasFCP {
-			b.WriteString(fmt.Sprintf("%sFCP %dms", sep, int(fcp)))
+			fmt.Fprintf(&b, "%sFCP %dms", sep, int(fcp))
 		}
 		b.WriteString("\n")
 	}
@@ -123,7 +123,7 @@ func FormatPerformanceReport(pageURL string, metrics map[string]any) string {
 	// DOM
 	if nodes, ok := metrics["domNodes"].(float64); ok {
 		depth, _ := metrics["domDepth"].(float64)
-		b.WriteString(fmt.Sprintf("DOM:       %d nodes | max depth %d\n", int(nodes), int(depth)))
+		fmt.Fprintf(&b, "DOM:       %d nodes | max depth %d\n", int(nodes), int(depth))
 	}
 
 	// WASM files
@@ -133,7 +133,7 @@ func FormatPerformanceReport(pageURL string, metrics map[string]any) string {
 				name, _ := entry["name"].(string)
 				size, _ := entry["size"].(float64)
 				duration, _ := entry["duration"].(float64)
-				b.WriteString(fmt.Sprintf("WASM:      %s %d KB (loaded in %dms)\n", name, int(size), int(duration)))
+				fmt.Fprintf(&b, "WASM:      %s %d KB (loaded in %dms)\n", name, int(size), int(duration))
 			}
 		}
 	}
@@ -141,7 +141,7 @@ func FormatPerformanceReport(pageURL string, metrics map[string]any) string {
 	// Resources total
 	if count, ok := metrics["resourceCount"].(float64); ok {
 		totalKB, _ := metrics["totalTransferKB"].(float64)
-		b.WriteString(fmt.Sprintf("Resources: %d total | %d KB transferred\n", int(count), int(totalKB)))
+		fmt.Fprintf(&b, "Resources: %d total | %d KB transferred\n", int(count), int(totalKB))
 	}
 
 	return b.String()

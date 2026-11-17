@@ -173,7 +173,7 @@ type AuditMobileReport struct {
 
 func FormatAuditMobileReport(pageURL string, r *AuditMobileReport) string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("Mobile Audit Report: %s\n\n", pageURL))
+	fmt.Fprintf(&sb, "Mobile Audit Report: %s\n\n", pageURL)
 
 	// Viewport Meta
 	sb.WriteString("1. Viewport Meta Check:\n")
@@ -189,9 +189,9 @@ func FormatAuditMobileReport(pageURL string, r *AuditMobileReport) string {
 	// VH Units
 	sb.WriteString("2. VH Units Check:\n")
 	if len(r.VhUnits) > 0 {
-		sb.WriteString(fmt.Sprintf("   [FAIL] Found %d element(s) using 'vh' units. '100vh' does not shrink when mobile browser bars contract/expand; use dvh/svh instead.\n", len(r.VhUnits)))
+		fmt.Fprintf(&sb, "   [FAIL] Found %d element(s) using 'vh' units. '100vh' does not shrink when mobile browser bars contract/expand; use dvh/svh instead.\n", len(r.VhUnits))
 		for _, el := range r.VhUnits {
-			sb.WriteString(fmt.Sprintf("     - %s\n", el))
+			fmt.Fprintf(&sb, "     - %s\n", el)
 		}
 	} else {
 		sb.WriteString("   [PASS] No vh units found.\n")
@@ -201,9 +201,9 @@ func FormatAuditMobileReport(pageURL string, r *AuditMobileReport) string {
 	// Safe Area
 	sb.WriteString("3. Safe Area Check:\n")
 	if len(r.SafeArea) > 0 {
-		sb.WriteString(fmt.Sprintf("   [FAIL] Found %d fixed/absolute element(s) at edge without safe-area-inset padding/margin. Content might be covered by notches or home bars.\n", len(r.SafeArea)))
+		fmt.Fprintf(&sb, "   [FAIL] Found %d fixed/absolute element(s) at edge without safe-area-inset padding/margin. Content might be covered by notches or home bars.\n", len(r.SafeArea))
 		for _, el := range r.SafeArea {
-			sb.WriteString(fmt.Sprintf("     - %s\n", el))
+			fmt.Fprintf(&sb, "     - %s\n", el)
 		}
 	} else {
 		sb.WriteString("   [PASS] All edge fixed/absolute elements use safe-area-inset padding/margin.\n")
@@ -213,9 +213,9 @@ func FormatAuditMobileReport(pageURL string, r *AuditMobileReport) string {
 	// Input Zoom
 	sb.WriteString("4. Input Zoom Check:\n")
 	if len(r.InputZoom) > 0 {
-		sb.WriteString(fmt.Sprintf("   [FAIL] Found %d input element(s) with font-size < 16px. iOS Safari will trigger automatic layout-shifting zoom when focused.\n", len(r.InputZoom)))
+		fmt.Fprintf(&sb, "   [FAIL] Found %d input element(s) with font-size < 16px. iOS Safari will trigger automatic layout-shifting zoom when focused.\n", len(r.InputZoom))
 		for _, el := range r.InputZoom {
-			sb.WriteString(fmt.Sprintf("     - %s\n", el))
+			fmt.Fprintf(&sb, "     - %s\n", el)
 		}
 	} else {
 		sb.WriteString("   [PASS] All form inputs have font-size >= 16px.\n")
@@ -225,9 +225,9 @@ func FormatAuditMobileReport(pageURL string, r *AuditMobileReport) string {
 	// Tap Target
 	sb.WriteString("5. Tap Target Check:\n")
 	if len(r.TapTarget) > 0 {
-		sb.WriteString(fmt.Sprintf("   [FAIL] Found %d interactive element(s) with tap bounding box smaller than 44x44 px (Apple HIG recommendation).\n", len(r.TapTarget)))
+		fmt.Fprintf(&sb, "   [FAIL] Found %d interactive element(s) with tap bounding box smaller than 44x44 px (Apple HIG recommendation).\n", len(r.TapTarget))
 		for _, el := range r.TapTarget {
-			sb.WriteString(fmt.Sprintf("     - %s\n", el))
+			fmt.Fprintf(&sb, "     - %s\n", el)
 		}
 	} else {
 		sb.WriteString("   [PASS] All interactive elements have tap sizes >= 44x44 px.\n")
@@ -237,9 +237,9 @@ func FormatAuditMobileReport(pageURL string, r *AuditMobileReport) string {
 	// Fixed VH
 	sb.WriteString("6. Fixed VH Check:\n")
 	if len(r.FixedVh) > 0 {
-		sb.WriteString(fmt.Sprintf("   [FAIL] Found %d fixed position element(s) using 'vh' height units. This causes severe rendering jumpiness on mobile scrolling.\n", len(r.FixedVh)))
+		fmt.Fprintf(&sb, "   [FAIL] Found %d fixed position element(s) using 'vh' height units. This causes severe rendering jumpiness on mobile scrolling.\n", len(r.FixedVh))
 		for _, el := range r.FixedVh {
-			sb.WriteString(fmt.Sprintf("     - %s\n", el))
+			fmt.Fprintf(&sb, "     - %s\n", el)
 		}
 	} else {
 		sb.WriteString("   [PASS] No fixed position elements are using 'vh' heights.\n")

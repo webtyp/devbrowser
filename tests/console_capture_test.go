@@ -88,10 +88,6 @@ func TestConsoleCapture(t *testing.T) {
 		if strings.Contains(log, "404") || strings.Contains(log, "Failed to load resource") {
 			foundNetwork = true
 		}
-		// Check for issues if they appear (not failing test if strict audit is off, but useful to see)
-		if strings.Contains(log, "[Issue]") {
-			//foundIssue = true
-		}
 	}
 
 	if !foundNormal {

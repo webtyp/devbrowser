@@ -5,7 +5,6 @@ package pbytes
 
 import (
 	"crypto/rand"
-	"reflect"
 	"strconv"
 	"testing"
 	"unsafe"
@@ -62,11 +61,11 @@ func TestPoolGet(t *testing.T) {
 func TestPoolPut(t *testing.T) {
 	p := New(0, 32)
 
-	miss := make([]byte, 5, 5)
+	miss := make([]byte, 5)
 	rand.Read(miss)
 	p.Put(miss) // Should not reuse (cap 5 is not a power-of-two pool bucket).
 
-	hit := make([]byte, 8, 8)
+	hit := make([]byte, 8)
 	rand.Read(hit)
 
 	// Under -race, sync.Pool.Put randomly drops ~25% of items to catch
@@ -88,9 +87,8 @@ func TestPoolPut(t *testing.T) {
 	}
 }
 
-func data(p []byte) uintptr {
-	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&p))
-	return hdr.Data
+func data(p []byte) *byte {
+	return unsafe.SliceData(p)
 }
 
 func BenchmarkPool(b *testing.B) {
