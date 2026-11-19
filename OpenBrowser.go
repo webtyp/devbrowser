@@ -74,6 +74,8 @@ func (h *DevBrowser) Open(rawURL string) error {
 			// Continue anyway - capture is optional
 		}
 		h.initializeNetworkCapture()
+		h.installLoadGuard()
+		h.guard.SetOrigin(rawURL)
 		h.initializeErrorCapture()
 		h.initializeInterceptCapture()
 		h.installSelectionCapture()

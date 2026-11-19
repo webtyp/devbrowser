@@ -80,6 +80,9 @@ type DevBrowser struct {
 	// in an incomplete state until manual reload.
 	pendingReload bool
 
+	// guard reloads the page when the dev server cuts one of its resources (load_guard.go).
+	guard *loadGuard
+
 	DB Store // Key-value store para configuración y estado
 
 	// chromedp fields
@@ -251,6 +254,9 @@ func (b *DevBrowser) NavigateToURL(url string) error {
 		return errors.New("context not initialized")
 	}
 
+	if b.guard != nil {
+		b.guard.SetOrigin(url)
+	}
 	if err := chromedp.Run(b.Ctx, chromedp.Navigate(url)); err != nil {
 		return err
 	}

@@ -128,6 +128,10 @@ Consumers are encouraged to call `CleanStale()` at application startup. `CleanSt
 
 `(*DevBrowser) CloseBrowser()` is idempotent and safe to call unconditionally (e.g. in `defer` statements or defensive shutdown paths). If the browser is already closed, it returns `nil` without error.
 
+## Self-healing page load
+
+A dev server that restarts while the page loads (daemon relaunch, rebuild) cuts a resource such as `browser.wasm` and leaves a blank page. `Open` and `NavigateToURL` guard the origin they point at: a transient transport error on one of its resources (`ERR_NETWORK_CHANGED`, `ERR_CONNECTION_REFUSED`, `ERR_CONNECTION_RESET`, `ERR_EMPTY_RESPONSE` and similar) reloads the page after 0.3 s, doubling up to 5 attempts, and the BROWSER line says so. After 10 s without a failure the attempts refill. Policy blocks (`ERR_BLOCKED_BY_CSP`) and navigation cancels are never retried. Source: [load_guard.go](load_guard.go), test: [TestOpen_PageRecoversWhenTheServerCutsAResource](tests/load_guard_test.go).
+
 ## Browser engine support
 
 `devbrowser` drives Chromium through CDP. It cannot emulate WebKit/Safari, and
