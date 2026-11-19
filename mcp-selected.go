@@ -79,7 +79,11 @@ func (b *DevBrowser) GetSelectedElementTools() []mcp.Tool {
 				if b.Ctx == nil {
 					return nil, fmt.Errorf("browser context is nil")
 				}
-				b.installSelectionCapture()
+				tab := b.toolTab()
+				if tab == nil {
+					return nil, fmt.Errorf("browser context is nil")
+				}
+				b.installSelectionCaptureOn(tab)
 
 				var args GetSelectedElementArgs
 				if err := req.Bind(&args); err != nil {
@@ -90,7 +94,7 @@ func (b *DevBrowser) GetSelectedElementTools() []mcp.Tool {
 					b.Mu.Lock()
 					n := b.selections.clear()
 					b.Mu.Unlock()
-					_ = chromedp.Run(b.Ctx, chromedp.Evaluate(clearSelectionBadgesJS, nil))
+					_ = chromedp.Run(tab.ctx, chromedp.Evaluate(clearSelectionBadgesJS, nil))
 					return mcp.Text(fmt.Sprintf(msgSelectionCleared, n)), nil
 				}
 
@@ -109,8 +113,8 @@ func (b *DevBrowser) GetSelectedElementTools() []mcp.Tool {
 					isNew := id != b.lastPanelNodeID
 					b.lastPanelNodeID = id
 					b.Mu.Unlock()
-					if isNew && b.enqueueNode(b.Ctx, id) {
-						b.captureSelection(SelectionDevToolsPanel)
+					if isNew && b.enqueueNode(tab.ctx, id) {
+						b.captureSelection(tab.ctx, SelectionDevToolsPanel)
 					}
 				}
 

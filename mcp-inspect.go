@@ -40,7 +40,7 @@ func (b *DevBrowser) GetInspectTools() []mcp.Tool {
 				var result string
 				js := fmt.Sprintf("(%s)(%q)", InspectElementJS, args.Selector)
 
-				err := chromedp.Run(b.Ctx,
+				err := chromedp.Run(b.toolCtx(),
 					chromedp.Evaluate(js, &result),
 				)
 

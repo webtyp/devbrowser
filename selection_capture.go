@@ -154,18 +154,28 @@ const devToolsPanelNodeJS = `(() => {
 	return JSON.stringify({ bID: bID });
 })()`
 
-// installSelectionCapture listens for the three selection gestures. It is
-// idempotent per browser context and synchronous, so a selection made right
-// after it returns is captured.
+// installSelectionCapture wires the selection gestures on the main tab.
 func (b *DevBrowser) installSelectionCapture() {
 	b.Mu.Lock()
-	ctx := b.Ctx
-	if ctx == nil || b.selectionCaptureInstalled {
+	main := b.mainTab
+	b.Mu.Unlock()
+	if main != nil {
+		b.installSelectionCaptureOn(main)
+	}
+}
+
+// installSelectionCaptureOn listens for the three selection gestures on tab.
+// It is idempotent per tab and synchronous, so a selection made right after
+// it returns is captured. The history is one for the whole browser.
+func (b *DevBrowser) installSelectionCaptureOn(tab *browserTab) {
+	b.Mu.Lock()
+	if tab == nil || tab.ctx == nil || tab.selectionInstalled {
 		b.Mu.Unlock()
 		return
 	}
-	b.selectionCaptureInstalled = true
+	tab.selectionInstalled = true
 	b.Mu.Unlock()
+	ctx := tab.ctx
 
 	chromedp.ListenTarget(ctx, func(ev any) {
 		switch e := ev.(type) {
@@ -173,24 +183,28 @@ func (b *DevBrowser) installSelectionCapture() {
 			if e.BackendNodeID != 0 {
 				go func(id cdp.BackendNodeID) {
 					if b.enqueueNode(ctx, id) {
-						b.captureSelection(SelectionInspectPointer)
+						b.captureSelection(ctx, SelectionInspectPointer)
 					}
 				}(e.BackendNodeID)
 			}
 		case *runtime.EventBindingCalled:
 			if e.Name == selectionBindingName {
-				go b.captureSelection(SelectionAltClick)
+				go b.captureSelection(ctx, SelectionAltClick)
 			}
 		case *page.EventFrameNavigated:
-			// The main frame got a new document (reload or navigation): its
-			// badges are gone, so the history they numbered goes with them.
-			// An SPA route change (pushState) keeps the document and does not
-			// fire this.
+			// The main frame of the tab in front got a new document (reload or
+			// navigation): its badges are gone, so the history they numbered
+			// goes with them. Another tab reloading (every rebuild reloads all)
+			// does not erase what the developer selected here. An SPA route
+			// change (pushState) keeps the document and does not fire this.
 			// In a goroutine, like the captures above: a listener runs on
 			// chromedp's event loop and must never wait on b.Mu, which a
 			// caller may hold while it waits on chromedp.
 			if e.Frame != nil && e.Frame.ParentID == "" {
 				go func() {
+					if b.toolTab() != tab {
+						return
+					}
 					b.Mu.Lock()
 					b.selections.clear()
 					b.Mu.Unlock()
@@ -230,15 +244,12 @@ func (b *DevBrowser) enqueueNode(ctx context.Context, id cdp.BackendNodeID) bool
 	return err == nil
 }
 
-// captureSelection snapshots the next queued element into the history and
-// marks it with its number on the page.
-func (b *DevBrowser) captureSelection(source SelectionSource) {
+// captureSelection snapshots the next queued element of the tab ctx into the
+// history and marks it with its number on that page.
+func (b *DevBrowser) captureSelection(ctx context.Context, source SelectionSource) {
 	b.captureMu.Lock()
 	defer b.captureMu.Unlock()
 
-	b.Mu.Lock()
-	ctx := b.Ctx
-	b.Mu.Unlock()
 	if ctx == nil {
 		return
 	}

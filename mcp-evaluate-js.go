@@ -29,7 +29,7 @@ func (b *DevBrowser) GetEvaluateJsTools() []mcp.Tool {
 				}
 
 				var res interface{}
-				err := chromedp.Run(b.Ctx,
+				err := chromedp.Run(b.toolCtx(),
 					chromedp.Evaluate(args.Script, &res, func(p *runtime.EvaluateParams) *runtime.EvaluateParams {
 						return p.WithAwaitPromise(args.AwaitPromise).WithIncludeCommandLineAPI(true)
 					}),

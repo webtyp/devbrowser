@@ -124,6 +124,8 @@ func (h *DevBrowser) CreateBrowserContext() error {
 	)
 	h.Ctx = ctx
 	h.Cancel = cancel
+	h.mainTab = &browserTab{ctx: ctx}
+	h.active.Store(h.mainTab)
 	h.AllocCancel = allocCancel
 
 	return nil

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"webtyp.com/devbrowser/cdproto/cdp"
@@ -61,10 +62,9 @@ type DevBrowser struct {
 
 	SourceLocator SourceLocator
 
-	selections                selectionHistory  // guarded by Mu
-	lastPanelNodeID           cdp.BackendNodeID // guarded by Mu; last DevTools panel node captured
-	selectionCaptureInstalled bool              // guarded by Mu
-	captureMu                 sync.Mutex        // serializes captureSelection
+	selections      selectionHistory  // guarded by Mu
+	lastPanelNodeID cdp.BackendNodeID // guarded by Mu; last DevTools panel node captured
+	captureMu       sync.Mutex        // serializes captureSelection
 
 	IsOpenFlag bool // Indica si el navegador está abierto
 
@@ -93,6 +93,12 @@ type DevBrowser struct {
 	// leaves the Chrome window alive -> orphan windows on restart (double window).
 	AllocCancel context.CancelFunc
 
+	// extraTabs are the tabs OpenTab added next to the main one (e.g. one per
+	// DEV_AUTOLOGIN user). MCP tools act only on Ctx; Reload refreshes them all.
+	extraTabs []*browserTab
+	mainTab   *browserTab                // the tab of Ctx; set by CreateBrowserContext
+	active    atomic.Pointer[browserTab] // the tab the developer has in front (tabs.go)
+
 	ReadyChan chan bool
 	ErrChan   chan error
 	ExitChan  chan bool
@@ -114,6 +120,7 @@ type DevBrowser struct {
 
 	// Request interception
 	InterceptActive bool
+	interceptCtx    context.Context // the tab interception runs on; guarded by InterceptMutex
 	InterceptedReqs []InterceptedRequest
 	InterceptMutex  sync.Mutex
 
@@ -240,14 +247,28 @@ func (h *DevBrowser) RestartBrowser() error {
 		return nil
 	}
 
+	tabs := h.extraTabURLs()
 	if err := h.CloseBrowser(); err != nil {
 		return errors.Join(this, err)
 	}
 
 	if lastURL != "" {
-		return h.Open(lastURL)
+		if err := h.Open(lastURL); err != nil {
+			return err
+		}
+	} else {
+		h.OpenBrowser(port, https)
 	}
-	h.OpenBrowser(port, https)
+	// The extra tabs (one per DEV_AUTOLOGIN user) come back with the browser.
+	var errs []error
+	for _, u := range tabs {
+		if err := h.OpenTab(u); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if len(errs) > 0 {
+		return errors.Join(append([]error{this}, errs...)...)
+	}
 	return nil
 }
 
@@ -298,6 +319,7 @@ func (b *DevBrowser) Reload() error {
 	if err := chromedp.Run(b.Ctx, chromedp.Reload()); err != nil {
 		return errors.New("Reload " + err.Error())
 	}
+	b.reloadExtraTabs()
 	return nil
 }
 

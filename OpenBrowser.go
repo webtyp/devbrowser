@@ -79,6 +79,7 @@ func (h *DevBrowser) Open(rawURL string) error {
 		h.initializeErrorCapture()
 		h.initializeInterceptCapture()
 		h.installSelectionCapture()
+		h.watchTab(h.mainTab)
 
 		if err := chromedp.Run(h.Ctx,
 			chromedp.Navigate(rawURL),

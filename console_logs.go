@@ -13,15 +13,19 @@ import (
 // initializeConsoleCapture sets up the console log capturing system using Chrome DevTools Protocol.
 // This captures ALL console messages including those from page load, using runtime events.
 func (b *DevBrowser) initializeConsoleCapture() error {
-	if b.Ctx == nil {
+	if b.Ctx == nil || b.mainTab == nil {
 		return errors.New("browser context not initialized")
 	}
-
-	// Initialize the console logs slice
+	b.LogsMutex.Lock()
 	b.ConsoleLogs = []string{}
+	b.LogsMutex.Unlock()
+	return b.captureConsole(b.mainTab)
+}
 
-	// Listen for console API called events and console cleared events
-	chromedp.ListenTarget(b.Ctx, func(ev interface{}) {
+// captureConsole records tab's console into its own buffer (b.ConsoleLogs
+// while tab is the active one, see consoleOf).
+func (b *DevBrowser) captureConsole(tab *browserTab) error {
+	chromedp.ListenTarget(tab.ctx, func(ev interface{}) {
 		switch ev := ev.(type) {
 		case *runtime.EventConsoleAPICalled:
 			b.LogsMutex.Lock()
@@ -48,7 +52,7 @@ func (b *DevBrowser) initializeConsoleCapture() error {
 			}
 
 			// Add to logs without type prefix to save tokens
-			b.ConsoleLogs = append(b.ConsoleLogs, message)
+			*b.consoleOf(tab) = append(*b.consoleOf(tab), message)
 
 		case *runtime.EventExceptionThrown:
 			b.LogsMutex.Lock()
@@ -59,7 +63,7 @@ func (b *DevBrowser) initializeConsoleCapture() error {
 			if ev.ExceptionDetails.Exception != nil && ev.ExceptionDetails.Exception.Description != "" {
 				msg += ": " + ev.ExceptionDetails.Exception.Description
 			}
-			b.ConsoleLogs = append(b.ConsoleLogs, msg)
+			*b.consoleOf(tab) = append(*b.consoleOf(tab), msg)
 
 		case *log.EventEntryAdded:
 			b.LogsMutex.Lock()
@@ -71,25 +75,25 @@ func (b *DevBrowser) initializeConsoleCapture() error {
 			if ev.Entry.URL != "" {
 				msg += fmt.Sprintf(" (%s)", ev.Entry.URL)
 			}
-			b.ConsoleLogs = append(b.ConsoleLogs, msg)
+			*b.consoleOf(tab) = append(*b.consoleOf(tab), msg)
 
 		case *audits.EventIssueAdded:
 			b.LogsMutex.Lock()
 			defer b.LogsMutex.Unlock()
 
 			// Capture Audit Issues (Cookie warnings, Mixed Content, etc.)
-			b.ConsoleLogs = append(b.ConsoleLogs, issueMessage(ev.Issue))
+			*b.consoleOf(tab) = append(*b.consoleOf(tab), issueMessage(ev.Issue))
 
 		case *runtime.EventExecutionContextsCleared:
 			// Clear logs when execution contexts are cleared (page reload/navigation)
 			b.LogsMutex.Lock()
-			b.ConsoleLogs = []string{}
+			*b.consoleOf(tab) = []string{}
 			b.LogsMutex.Unlock()
 		}
 	})
 
 	// Enable console, log, and audits domains to start receiving events
-	err := chromedp.Run(b.Ctx,
+	err := chromedp.Run(tab.ctx,
 		runtime.Enable(),
 		log.Enable(),
 		audits.Enable(),

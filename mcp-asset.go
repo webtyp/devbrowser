@@ -32,7 +32,7 @@ func (b *DevBrowser) GetAssetTools() []mcp.Tool {
 				})`, args.Url)
 
 				var result interface{}
-				err := chromedp.Run(b.Ctx,
+				err := chromedp.Run(b.toolCtx(),
 					chromedp.Evaluate(js, &result, func(p *runtime.EvaluateParams) *runtime.EvaluateParams {
 						return p.WithAwaitPromise(true)
 					}),

@@ -40,6 +40,13 @@ func (h *DevBrowser) shutdownChrome() {
 		h.Cancel()
 		h.Cancel = nil
 	}
+	// Each extra tab derives from Ctx, so the cancel above already closed it.
+	for _, t := range h.extraTabs {
+		t.cancel()
+	}
+	h.extraTabs = nil
+	h.mainTab = nil
+	h.active.Store(nil)
 }
 
 // CloseBrowser reports AFTER releasing h.Mu: the logger and the UI of every TUI call back into the browser
@@ -52,7 +59,6 @@ func (h *DevBrowser) CloseBrowser() error {
 	h.pendingReload = false
 	// The next browser context needs its listeners again; the history is cleared
 	// by the first navigation of the new context.
-	h.selectionCaptureInstalled = false
 	h.lastPanelNodeID = 0
 
 	h.shutdownChrome()

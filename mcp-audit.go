@@ -270,7 +270,7 @@ func (b *DevBrowser) GetAuditTools() []mcp.Tool {
 				var report AuditMobileReport
 
 				js := fmt.Sprintf("(%s)(%q)", GetAuditMobileJS, args.Selector)
-				err := chromedp.Run(b.Ctx,
+				err := chromedp.Run(b.toolCtx(),
 					chromedp.Location(&pageURL),
 					chromedp.Evaluate(js, &report),
 				)

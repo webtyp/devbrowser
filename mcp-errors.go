@@ -61,7 +61,15 @@ func (b *DevBrowser) GetErrorTools() []mcp.Tool {
 }
 
 func (b *DevBrowser) initializeErrorCapture() {
-	chromedp.ListenTarget(b.Ctx, func(ev interface{}) {
+	if b.mainTab != nil {
+		b.captureErrors(b.mainTab)
+	}
+}
+
+// captureErrors records tab's uncaught JS errors into its own buffer
+// (b.JsErrors while tab is the active one, see errorsOf).
+func (b *DevBrowser) captureErrors(tab *browserTab) {
+	chromedp.ListenTarget(tab.ctx, func(ev interface{}) {
 		switch ev := ev.(type) {
 		case *runtime.EventExceptionThrown:
 			b.ErrorsMutex.Lock()
@@ -80,10 +88,10 @@ func (b *DevBrowser) initializeErrorCapture() {
 				jsErr.StackTrace = exception.Exception.Description
 			}
 
-			b.JsErrors = append(b.JsErrors, jsErr)
+			*b.errorsOf(tab) = append(*b.errorsOf(tab), jsErr)
 		case *runtime.EventExecutionContextsCleared:
 			b.ErrorsMutex.Lock()
-			b.JsErrors = []JSError{}
+			*b.errorsOf(tab) = []JSError{}
 			b.ErrorsMutex.Unlock()
 		}
 	})

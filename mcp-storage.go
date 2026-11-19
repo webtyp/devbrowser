@@ -35,7 +35,7 @@ func (b *DevBrowser) GetStorageTools() []mcp.Tool {
 				}
 
 				var result string
-				err := chromedp.Run(b.Ctx, chromedp.Evaluate(js, &result))
+				err := chromedp.Run(b.toolCtx(), chromedp.Evaluate(js, &result))
 				if err != nil {
 					return nil, err
 				}

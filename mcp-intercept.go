@@ -17,7 +17,7 @@ func (b *DevBrowser) GetInterceptTools() []mcp.Tool {
 		{
 			Name:        "browser_intercept_request",
 			Description: "Capture request and response bodies for XHR/fetch calls. Use 'start' to begin, 'stop' to end, and 'get' to retrieve captured data.",
-			Args: new(InterceptRequestArgs),
+			Args:        new(InterceptRequestArgs),
 			Resource:    "browser",
 			Action:      'u',
 			Execute: func(ctx *twcontext.Context, req mcp.Request) (*mcp.Result, error) {
@@ -50,15 +50,21 @@ func (b *DevBrowser) startInterception(filter string) (*mcp.Result, error) {
 		b.InterceptMutex.Unlock()
 		return mcp.Text("Interception is already active"), nil
 	}
+	ctx := b.toolCtx() // the tab the developer has in front
 	b.InterceptActive = true
 	b.InterceptedReqs = nil
+	b.interceptCtx = ctx
 	b.InterceptMutex.Unlock()
 
 	// Enable with RequestStageResponse to get bodies
-	err := chromedp.Run(b.Ctx, fetch.Enable().WithPatterns([]*fetch.RequestPattern{
+	err := chromedp.Run(ctx, fetch.Enable().WithPatterns([]*fetch.RequestPattern{
 		{URLPattern: "*", RequestStage: fetch.RequestStageResponse},
 	}))
 	if err != nil {
+		b.InterceptMutex.Lock()
+		b.InterceptActive = false
+		b.interceptCtx = nil
+		b.InterceptMutex.Unlock()
 		return nil, err
 	}
 
@@ -68,9 +74,14 @@ func (b *DevBrowser) startInterception(filter string) (*mcp.Result, error) {
 func (b *DevBrowser) stopInterception() (*mcp.Result, error) {
 	b.InterceptMutex.Lock()
 	b.InterceptActive = false
+	ctx := b.interceptCtx
+	b.interceptCtx = nil
 	b.InterceptMutex.Unlock()
+	if ctx == nil || ctx.Err() != nil {
+		return mcp.Text("Request interception stopped"), nil
+	}
 
-	err := chromedp.Run(b.Ctx, fetch.Disable())
+	err := chromedp.Run(ctx, fetch.Disable())
 	if err != nil {
 		return nil, err
 	}
@@ -115,9 +126,17 @@ func (b *DevBrowser) getInterceptedRequests(filter string, limit int) (*mcp.Resu
 }
 
 func (b *DevBrowser) initializeInterceptCapture() {
-	chromedp.ListenTarget(b.Ctx, func(ev interface{}) {
+	if b.mainTab != nil {
+		b.captureIntercept(b.mainTab)
+	}
+}
+
+// captureIntercept records tab's paused requests while interception runs on
+// it (startInterception enables it on the tab in front).
+func (b *DevBrowser) captureIntercept(tab *browserTab) {
+	chromedp.ListenTarget(tab.ctx, func(ev interface{}) {
 		b.InterceptMutex.Lock()
-		active := b.InterceptActive
+		active := b.InterceptActive && b.interceptCtx == tab.ctx
 		b.InterceptMutex.Unlock()
 		if !active {
 			return
@@ -146,9 +165,8 @@ func (b *DevBrowser) initializeInterceptCapture() {
 						intercepted.RequestBody = postData.String()
 					}
 
-					// Use b.Ctx (allocated) for GetResponseBody
 					var body []byte
-					err := chromedp.Run(b.Ctx, chromedp.ActionFunc(func(ctx context.Context) error {
+					err := chromedp.Run(tab.ctx, chromedp.ActionFunc(func(ctx context.Context) error {
 						var err error
 						body, err = fetch.GetResponseBody(ev.RequestID).Do(ctx)
 						return err
@@ -167,7 +185,7 @@ func (b *DevBrowser) initializeInterceptCapture() {
 				}
 
 				// Always continue
-				chromedp.Run(b.Ctx, fetch.ContinueRequest(ev.RequestID))
+				chromedp.Run(tab.ctx, fetch.ContinueRequest(ev.RequestID))
 			}()
 		}
 	})

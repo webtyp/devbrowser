@@ -26,11 +26,11 @@ func (b *DevBrowser) CaptureScreenshot(fullpage bool) (*ScreenshotResult, error)
 	var err error
 
 	if fullpage {
-		err = chromedp.Run(b.Ctx,
+		err = chromedp.Run(b.toolCtx(),
 			chromedp.FullScreenshot(&buf, 90),
 		)
 	} else {
-		err = chromedp.Run(b.Ctx,
+		err = chromedp.Run(b.toolCtx(),
 			chromedp.CaptureScreenshot(&buf),
 		)
 	}
@@ -44,7 +44,7 @@ func (b *DevBrowser) CaptureScreenshot(fullpage bool) (*ScreenshotResult, error)
 	}
 
 	// Capture comprehensive page context
-	err = chromedp.Run(b.Ctx,
+	err = chromedp.Run(b.toolCtx(),
 		chromedp.Title(&res.PageTitle),
 		chromedp.Location(&res.PageURL),
 		chromedp.Evaluate(`window.innerWidth`, &res.Width),
@@ -67,7 +67,7 @@ func (b *DevBrowser) CaptureElementScreenshot(selector string) (*ScreenshotResul
 	}
 
 	var buf []byte
-	err := chromedp.Run(b.Ctx,
+	err := chromedp.Run(b.toolCtx(),
 		chromedp.Screenshot(selector, &buf),
 	)
 
@@ -80,7 +80,7 @@ func (b *DevBrowser) CaptureElementScreenshot(selector string) (*ScreenshotResul
 	}
 
 	// Capture basic context
-	_ = chromedp.Run(b.Ctx,
+	_ = chromedp.Run(b.toolCtx(),
 		chromedp.Title(&res.PageTitle),
 		chromedp.Location(&res.PageURL),
 		chromedp.Evaluate(`window.innerWidth`, &res.Width),

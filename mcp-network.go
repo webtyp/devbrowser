@@ -83,6 +83,14 @@ func (b *DevBrowser) GetNetworkTools() []mcp.Tool {
 }
 
 func (b *DevBrowser) initializeNetworkCapture() {
+	if b.mainTab != nil {
+		b.captureNetwork(b.mainTab)
+	}
+}
+
+// captureNetwork records tab's requests into its own buffer (b.NetworkLogs
+// while tab is the active one, see networkOf).
+func (b *DevBrowser) captureNetwork(tab *browserTab) {
 	type requestInfo struct {
 		Method string
 		Url    string
@@ -91,7 +99,7 @@ func (b *DevBrowser) initializeNetworkCapture() {
 	requests := make(map[network.RequestID]requestInfo)
 	var mutex sync.Mutex
 
-	chromedp.ListenTarget(b.Ctx, func(ev interface{}) {
+	chromedp.ListenTarget(tab.ctx, func(ev interface{}) {
 		switch ev := ev.(type) {
 		case *network.EventRequestWillBeSent:
 			mutex.Lock()
@@ -103,7 +111,7 @@ func (b *DevBrowser) initializeNetworkCapture() {
 			mutex.Unlock()
 			if ev.Type == "Document" {
 				b.NetworkMutex.Lock()
-				b.NetworkLogs = []NetworkLogEntry{}
+				*b.networkOf(tab) = []NetworkLogEntry{}
 				b.NetworkMutex.Unlock()
 			}
 
@@ -114,7 +122,7 @@ func (b *DevBrowser) initializeNetworkCapture() {
 			if ok {
 				duration := time.Since(reqInfo.Time).Milliseconds()
 				b.NetworkMutex.Lock()
-				b.NetworkLogs = append(b.NetworkLogs, NetworkLogEntry{
+				*b.networkOf(tab) = append(*b.networkOf(tab), NetworkLogEntry{
 					URL:      ev.Response.URL,
 					Method:   reqInfo.Method,
 					Status:   int(ev.Response.Status),
@@ -131,7 +139,7 @@ func (b *DevBrowser) initializeNetworkCapture() {
 			if ok {
 				duration := time.Since(reqInfo.Time).Milliseconds()
 				b.NetworkMutex.Lock()
-				b.NetworkLogs = append(b.NetworkLogs, NetworkLogEntry{
+				*b.networkOf(tab) = append(*b.networkOf(tab), NetworkLogEntry{
 					URL:       reqInfo.Url,
 					Method:    reqInfo.Method,
 					Type:      string(ev.Type),

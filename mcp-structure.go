@@ -118,7 +118,7 @@ func (b *DevBrowser) GetStructureTools() []mcp.Tool {
 				var pageTitle, pageURL, structure string
 				var windowWidth, windowHeight int
 
-				err := chromedp.Run(b.Ctx,
+				err := chromedp.Run(b.toolCtx(),
 					chromedp.Title(&pageTitle),
 					chromedp.Location(&pageURL),
 					chromedp.Evaluate(`window.innerWidth`, &windowWidth),

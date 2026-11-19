@@ -1,6 +1,8 @@
 package devbrowser
 
 import (
+	stdctx "context"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -111,15 +113,27 @@ func (b *DevBrowser) GetManagementTools() []mcp.Tool {
 	}
 }
 
-// applyDeviceEmulation applies the current b.ViewportMode or b.ViewportDevice using CDP emulation commands.
+// applyDeviceEmulation applies the current b.ViewportMode or b.ViewportDevice
+// to every tab: the viewport is a setting of the whole browser.
 func (b *DevBrowser) applyDeviceEmulation() error {
+	var errs []error
+	for _, ctx := range b.allTabCtxs() {
+		if err := b.applyDeviceEmulationOn(ctx); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
+}
+
+// applyDeviceEmulationOn applies the current viewport setting to one tab.
+func (b *DevBrowser) applyDeviceEmulationOn(tabCtx stdctx.Context) error {
 	b.Mu.Lock()
 	mode := b.ViewportMode
 	devName := b.ViewportDevice
 	b.Mu.Unlock()
 
 	// Clear any previous metrics override to measure unconstrained window
-	if err := chromedp.Run(b.Ctx,
+	if err := chromedp.Run(tabCtx,
 		emulation.ClearDeviceMetricsOverride(),
 		emulation.SetTouchEmulationEnabled(false),
 		emulation.SetUserAgentOverride(""),
@@ -132,7 +146,7 @@ func (b *DevBrowser) applyDeviceEmulation() error {
 		if err != nil {
 			return err
 		}
-		return chromedp.Run(b.Ctx, chromedp.Emulate(d))
+		return chromedp.Run(tabCtx, chromedp.Emulate(d))
 	}
 
 	switch mode {
@@ -143,7 +157,7 @@ func (b *DevBrowser) applyDeviceEmulation() error {
 	case "mobile", "tablet":
 		// Read available inner dimensions inside Chrome (respects DevTools docked on right/bottom)
 		var availW, availH int
-		if err := chromedp.Run(b.Ctx,
+		if err := chromedp.Run(tabCtx,
 			chromedp.Evaluate(`window.innerWidth`, &availW),
 			chromedp.Evaluate(`window.innerHeight`, &availH),
 		); err != nil {
@@ -173,7 +187,7 @@ func (b *DevBrowser) applyDeviceEmulation() error {
 
 		// Apply override: target width + 0 height (0 disables height override so height
 		// tracks the available window & Chrome DevTools naturally without overflowing or cutting off)
-		return chromedp.Run(b.Ctx,
+		return chromedp.Run(tabCtx,
 			emulation.SetDeviceMetricsOverride(int64(targetW), 0, 1.0, true),
 			emulation.SetTouchEmulationEnabled(true),
 			emulation.SetUserAgentOverride(ua),

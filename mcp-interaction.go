@@ -40,7 +40,7 @@ func (b *DevBrowser) GetInteractionTools() []mcp.Tool {
 					timeout = 5000
 				}
 
-				tctx, cancel := stdctx.WithTimeout(b.Ctx, time.Duration(timeout)*time.Millisecond)
+				tctx, cancel := stdctx.WithTimeout(b.toolCtx(), time.Duration(timeout)*time.Millisecond)
 				defer cancel()
 
 				// 1. Wait for element to be present in DOM (WaitReady)
@@ -104,7 +104,7 @@ func (b *DevBrowser) GetInteractionTools() []mcp.Tool {
 					timeout = 5000
 				}
 
-				tctx, cancel := stdctx.WithTimeout(b.Ctx, time.Duration(timeout)*time.Millisecond)
+				tctx, cancel := stdctx.WithTimeout(b.toolCtx(), time.Duration(timeout)*time.Millisecond)
 				defer cancel()
 
 				err := chromedp.Run(tctx,
@@ -137,7 +137,7 @@ func (b *DevBrowser) GetInteractionTools() []mcp.Tool {
 				}
 
 				// Swipe Logic
-				err := chromedp.Run(b.Ctx,
+				err := chromedp.Run(b.toolCtx(),
 					chromedp.WaitVisible(args.Selector, chromedp.ByQuery),
 					chromedp.ActionFunc(func(ctx stdctx.Context) error {
 						// 1. Get element dimensions to find center

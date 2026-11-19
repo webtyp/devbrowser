@@ -168,7 +168,7 @@ func (b *DevBrowser) GetPerformanceTools() []mcp.Tool {
 				var pageURL string
 				var metrics map[string]any
 
-				err := chromedp.Run(b.Ctx,
+				err := chromedp.Run(b.toolCtx(),
 					chromedp.Location(&pageURL),
 					chromedp.Evaluate(GetPerformanceJS, &metrics),
 				)
