@@ -32,11 +32,6 @@ func encodeArgs(f model.Encodable) string {
 // Note: we provide simple local implementations of the required
 // interfaces so tests don't need to construct or import fake types.
 
-// defaultServerConfig implements serverConfig for tests.
-type defaultServerConfig struct{}
-
-func (defaultServerConfig) ServerPort() string { return "0" }
-
 // defaultUI implements userInterface for tests.
 type defaultUI struct{}
 

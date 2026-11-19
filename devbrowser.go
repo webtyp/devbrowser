@@ -94,7 +94,8 @@ type DevBrowser struct {
 	ErrChan   chan error
 	ExitChan  chan bool
 
-	Log func(message ...any) // For logging output (Loggable interface)
+	Log      func(message ...any) // For logging output (Loggable interface)
+	lastOpID string
 
 	// Console log capture
 	ConsoleLogs []string
@@ -189,6 +190,7 @@ func New(ui UserInterface, st Store, exitChan chan bool, opts ...Option) *DevBro
 		ErrChan:      make(chan error),
 		ExitChan:     exitChan,
 		CacheEnabled: false, // Default: Cache disabled for development
+		lastOpID:     "browser-status",
 	}
 
 	// Apply options
@@ -297,6 +299,25 @@ func (b *DevBrowser) SetLog(f func(message ...any)) {
 
 func (b *DevBrowser) GetLog() func(message ...any) {
 	return b.Log
+}
+
+// GetLastOperationID returns the stable TUI OperationID so BROWSER updates a
+// single live line in place during hot-reload cycles.
+func (b *DevBrowser) GetLastOperationID() string {
+	b.Mu.Lock()
+	id := b.lastOpID
+	b.Mu.Unlock()
+	if id == "" {
+		return "browser-status"
+	}
+	return id
+}
+
+// SetLastOperationID overrides the TUI OperationID for BROWSER logs.
+func (b *DevBrowser) SetLastOperationID(id string) {
+	b.Mu.Lock()
+	b.lastOpID = id
+	b.Mu.Unlock()
 }
 
 func (b *DevBrowser) Logger(messages ...any) {

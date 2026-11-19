@@ -2,10 +2,6 @@ package devbrowser
 
 import "sync/atomic"
 
-const (
-	shortcutBrowserToggle = "B"
-)
-
 func (h *DevBrowser) Name() string {
 	return "BROWSER"
 }
