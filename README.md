@@ -50,7 +50,10 @@ This ensures the copy happens exactly once per model version, speeding up subseq
 - `(*DevBrowser) OpenBrowser() error`: Launch a new browser window.
 - `(*DevBrowser) CloseBrowser() error`: Close the browser and clean up resources. Safe to call unconditionally (idempotent, returns `nil` if already closed).
 - `(*DevBrowser) Reload() error`: Reload the current page in the browser.
-- `(*DevBrowser) RestartBrowser() error`: Restart the browser (close and reopen).
+- `(*DevBrowser) RestartBrowser() error`: Restart the browser (close and reopen), extra tabs included.
+- `(*DevBrowser) OpenTab(url string) error`: Open `url` in a new tab of the open browser (e.g. one per `DEV_AUTOLOGIN` user: `http://user2.localhost:PORT/`). Each tab keeps its own console, network and error logs, and reloads with the main tab on every rebuild.
+- `(*DevBrowser) CloseTabs()`: Close every tab `OpenTab` added; the main tab stays.
+- **MCP tools follow the tab in front:** when the developer switches tab (or clicks into a page), every tool — console, network, errors, evaluate, click, screenshot, navigate, intercept, selected element — acts on that tab. Device emulation applies to every tab.
 - `(*DevBrowser) BrowserStartUrlChanged(fieldName, oldValue, newValue string) error`: Handle changes to the start URL and restart the browser if open.
 - `(*DevBrowser) BrowserPositionAndSizeChanged(fieldName, oldValue, newValue string) error`: Change the browser window's position and size, and restart the browser.
 - `(*DevBrowser) Name() string` and `(*DevBrowser) Label() string`: For UI integration, returns the component name and label.
