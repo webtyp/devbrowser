@@ -42,10 +42,10 @@ func (h *DevBrowser) shutdownChrome() {
 	}
 }
 
+// CloseBrowser reports AFTER releasing h.Mu: the logger and the UI of every TUI call back into the browser
+// (GetLastOperationID, IsOpen), and reporting under the lock deadlocked the daemon's Shutdown for good.
 func (h *DevBrowser) CloseBrowser() error {
 	h.Mu.Lock()
-	defer h.Mu.Unlock()
-
 	wasOpen := h.IsOpenFlag
 	h.IsOpenFlag = false
 	h.ready = false
@@ -56,9 +56,11 @@ func (h *DevBrowser) CloseBrowser() error {
 	h.lastPanelNodeID = 0
 
 	h.shutdownChrome()
+	status := h.StatusMessage()
+	h.Mu.Unlock()
 
 	if wasOpen {
-		h.Logger(h.StatusMessage())
+		h.Logger(status)
 		h.UI.RefreshUI()
 	}
 	return nil

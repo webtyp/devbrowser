@@ -125,7 +125,9 @@ type DevBrowser struct {
 
 	// Cache configuration
 	CacheEnabled bool // Disabled by default for development
-	Mu           sync.Mutex
+	// Mu guards the browser state. Never call Logger, Log or UI while holding it: every TUI's logger and UI call
+	// back into the browser (GetLastOperationID, IsOpen) and the lock is not reentrant (tests/reentrant_callbacks_test.go).
+	Mu sync.Mutex
 
 	ProfileDir            string // "" = throwaway profile
 	profileFallbackReason string
@@ -362,15 +364,19 @@ func (b *DevBrowser) monitorBrowserClose() {
 	// Wait for context to be done (browser closed)
 	<-ctx.Done()
 
+	// Only handle if browser was marked as open (manual close by user). Report after releasing the lock: the
+	// logger and the UI call back into the browser.
 	b.Mu.Lock()
-	defer b.Mu.Unlock()
-
-	// Only handle if browser was marked as open (manual close by user)
-	if b.IsOpenFlag {
-		b.Logger("Browser closed by user")
+	closedByUser := b.IsOpenFlag
+	if closedByUser {
 		b.IsOpenFlag = false
 		b.Ctx = nil
 		b.Cancel = nil
+	}
+	b.Mu.Unlock()
+
+	if closedByUser {
+		b.Logger("Browser closed by user")
 		if b.UI != nil {
 			b.UI.RefreshUI()
 		}

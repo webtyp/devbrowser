@@ -41,21 +41,18 @@ func (b *DevBrowser) CalculateConstrainedSize(reqW, reqH, monW, monH int) (int, 
 // if it hasn't been configured yet.
 func (b *DevBrowser) StartWithDetectedSize() {
 	b.Mu.Lock()
-	defer b.Mu.Unlock()
-
-	// If user already has a saved config, respect it
-	if b.SizeConfigured {
+	// If user already has a saved config, respect it; if no monitor detected, keep defaults
+	if b.SizeConfigured || b.MonitorWidth == 0 || b.MonitorHeight == 0 {
+		b.Mu.Unlock()
 		return
 	}
-
-	// If no monitor detected, keep defaults
-	if b.MonitorWidth == 0 || b.MonitorHeight == 0 {
-		return
-	}
-
 	b.Width = b.MonitorWidth
 	b.Height = b.MonitorHeight
-	b.Log(fmt.Sprintf("Browser size auto-adjusted to monitor: %dx%d", b.Width, b.Height))
+	w, h := b.Width, b.Height
+	b.Mu.Unlock()
+
+	// Logged after releasing the lock: the logger calls back into the browser (GetLastOperationID).
+	b.Logger(fmt.Sprintf("Browser size auto-adjusted to monitor: %dx%d", w, h))
 }
 
 // DevToolsReservedWidth is a conservative, documented ESTIMATE of the
