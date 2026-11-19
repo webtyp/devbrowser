@@ -6,10 +6,10 @@ require webtyp.com/screenshot v0.0.2
 
 require (
 	webtyp.com/context v0.0.23
-	webtyp.com/filepath v0.1.0
-	webtyp.com/fmt v1.0.0
+	webtyp.com/filepath v0.1.3
+	webtyp.com/fmt v1.0.2
 	webtyp.com/json v0.5.40
-	webtyp.com/lang v0.1.16
+	webtyp.com/lang v0.1.22
 	webtyp.com/mcp v0.3.0
 	webtyp.com/model v0.2.12
 )
